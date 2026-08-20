@@ -18,6 +18,8 @@ from ouput import EventOutput
 INPUT_DIR = Path("outputs/test_input")
 OUTPUT_DIR = "outputs/events"
 
+# Single-camera MVP.
+# Keep None until a real camera identity is required.
 CAMERA_ID = None
 
 
@@ -51,7 +53,7 @@ def load_frames():
 
 def print_error(error: Exception):
     """
-    Print errors as structured JSON.
+    Print errors as JSON.
     """
 
     error_output = {
@@ -78,10 +80,10 @@ def print_error(error: Exception):
 
 def create_zones() -> list[Zone]:
     """
-    Create configured safety zones.
+    Create the configured safety zones.
 
-    Replace the polygon with the actual track
-    restricted-area coordinates later.
+    These coordinates are placeholders for testing.
+    Replace them with the actual restricted-area polygon.
     """
 
     return [
@@ -99,7 +101,7 @@ def create_zones() -> list[Zone]:
 
 
 # ============================================================
-# MAIN PIPELINE
+# MAIN
 # ============================================================
 
 def main():
@@ -107,15 +109,7 @@ def main():
     try:
 
         # ----------------------------------------------------
-        # Load Member 1 frames
-        # ----------------------------------------------------
-
-        frames = load_frames()
-
-        # ----------------------------------------------------
-        # Initialize pipeline ONCE
-        #
-        # These objects maintain information across frames.
+        # Initialize pipeline components ONCE
         # ----------------------------------------------------
 
         tracker = TrackerWrapper()
@@ -142,8 +136,10 @@ def main():
         )
 
         # ----------------------------------------------------
-        # Process every Member 1 frame
+        # Process Member 1 frames
         # ----------------------------------------------------
+
+        frames = load_frames()
 
         for data in frames:
 
@@ -187,14 +183,14 @@ def main():
             )
 
             # =================================================
-            # PROCESS STATES
+            # PROCESS EACH ACTIVE TRACK
             # =================================================
 
             for state in states:
 
-                # ---------------------------------------------
+                # ------------------------------------------------
                 # STATE → MOVEMENT
-                # ---------------------------------------------
+                # ------------------------------------------------
 
                 movement = (
                     movement_analyzer.analyze(
@@ -202,28 +198,23 @@ def main():
                     )
                 )
 
-                # ---------------------------------------------
+                # ------------------------------------------------
                 # STATE → ZONE
-                # ---------------------------------------------
+                # ------------------------------------------------
 
-                transition = (
-                    zone_engine.update(
-                        track_id=state.track_id,
-                        point=state.foot_point,
-                    )
+                transition = zone_engine.update(
+                    track_id=state.track_id,
+                    point=state.foot_point,
                 )
 
-                # Keep state synchronized with
-                # the zone engine.
-
+                # Keep TrackState synchronized.
                 state.set_zone(
                     transition.current_zone
                 )
 
-                # ---------------------------------------------
-                # MOVEMENT + ZONE + STATE
-                # → EVENT ENGINE
-                # ---------------------------------------------
+                # ------------------------------------------------
+                # STATE + MOVEMENT + ZONE → EVENTS
+                # ------------------------------------------------
 
                 events = event_engine.process(
                     state=state,
@@ -233,12 +224,15 @@ def main():
                     timestamp_ms=timestamp_ms,
                 )
 
+                # No event means there is nothing to send
+                # to the event output layer.
+
                 if not events:
                     continue
 
-                # ---------------------------------------------
-                # EVENT → FINAL JSON
-                # ---------------------------------------------
+                # ------------------------------------------------
+                # EVENT → CANONICAL OUTPUT
+                # ------------------------------------------------
 
                 for event in events:
 
@@ -249,9 +243,9 @@ def main():
                         )
                     )
 
-                    # -----------------------------------------
-                    # PRINT RAW JSON
-                    # -----------------------------------------
+                    # ------------------------------------------------
+                    # RAW JSON OUTPUT
+                    # ------------------------------------------------
 
                     print(
                         event_output.to_json(
@@ -259,9 +253,9 @@ def main():
                         )
                     )
 
-                    # -----------------------------------------
+                    # ------------------------------------------------
                     # SAVE JSON
-                    # -----------------------------------------
+                    # ------------------------------------------------
 
                     event_output.save(
                         payload

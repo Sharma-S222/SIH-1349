@@ -2,16 +2,13 @@ import json
 from pathlib import Path
 from typing import Any
 
-from event import SafetyEvent
+from events import SafetyEvent
 
 
 class EventOutput:
     """
-    Converts SafetyEvent objects into a clean JSON-compatible
-    event record.
-
-    This is the final serialization layer between the tracking/
-    refinement pipeline and downstream storage or consumers.
+    Converts SafetyEvent objects into the canonical JSON
+    representation used by downstream systems and storage.
     """
 
     SCHEMA_VERSION = "1.1"
@@ -35,10 +32,8 @@ class EventOutput:
         metadata: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """
-        Convert a SafetyEvent into the final event schema.
-
-        camera_id is optional because the current system uses
-        a single camera.
+        Convert one SafetyEvent into a JSON-compatible
+        canonical event record.
         """
 
         if not isinstance(event, SafetyEvent):
@@ -90,9 +85,13 @@ class EventOutput:
                 event.timestamp_ms
             ),
 
-            "event_type": event.event_type,
+            "event_type": str(
+                event.event_type
+            ),
 
-            "severity": event.severity,
+            "severity": str(
+                event.severity
+            ),
 
             "confidence": round(
                 float(event.confidence),
@@ -122,33 +121,19 @@ class EventOutput:
             ),
         }
 
-    def build_from_event(
-        self,
-        event: SafetyEvent,
-        camera_id: str | None = None,
-        event_id: str | None = None,
-        metadata: dict[str, Any] | None = None,
-    ) -> dict[str, Any]:
-        """
-        Alias for build_event().
-
-        Kept explicit so main.py can read naturally.
-        """
-
-        return self.build_event(
-            event=event,
-            camera_id=camera_id,
-            event_id=event_id,
-            metadata=metadata,
-        )
-
     def to_json(
         self,
         event: dict[str, Any],
     ) -> str:
         """
-        Convert an event dictionary into formatted JSON.
+        Convert a canonical event dictionary
+        into formatted JSON.
         """
+
+        if not isinstance(event, dict):
+            raise TypeError(
+                "event must be a dictionary"
+            )
 
         return json.dumps(
             event,
@@ -162,18 +147,23 @@ class EventOutput:
         filename: str | None = None,
     ) -> Path:
         """
-        Save one event as a JSON file.
+        Save a canonical event as a JSON file.
         """
 
-        if "event_id" not in event:
+        if not isinstance(event, dict):
+            raise TypeError(
+                "event must be a dictionary"
+            )
+
+        event_id = event.get("event_id")
+
+        if not event_id:
             raise ValueError(
                 "event must contain event_id"
             )
 
         if filename is None:
-            filename = (
-                f"{event['event_id']}.json"
-            )
+            filename = f"{event_id}.json"
 
         output_path = (
             self.output_dir / filename
@@ -193,30 +183,6 @@ class EventOutput:
 
         return output_path
 
-    def save_event(
-        self,
-        event: SafetyEvent,
-        camera_id: str | None = None,
-        event_id: str | None = None,
-        metadata: dict[str, Any] | None = None,
-        filename: str | None = None,
-    ) -> Path:
-        """
-        Build and save a SafetyEvent in one operation.
-        """
-
-        output = self.build_event(
-            event=event,
-            camera_id=camera_id,
-            event_id=event_id,
-            metadata=metadata,
-        )
-
-        return self.save(
-            output,
-            filename=filename,
-        )
-
     @staticmethod
     def _generate_event_id(
         event: SafetyEvent,
@@ -225,8 +191,7 @@ class EventOutput:
         """
         Generate a deterministic event identifier.
 
-        The current system uses one camera, so 'CAM_NONE' is
-        used when no camera ID is supplied.
+        CAM_NONE is used when no camera ID is available.
         """
 
         camera_part = (
@@ -248,11 +213,11 @@ class EventOutput:
         value: Any,
     ) -> Any:
         """
-        Recursively convert common Python values into
+        Convert common Python structures into
         JSON-safe structures.
 
-        Tuples become lists.
-        Dictionaries and lists are processed recursively.
+        Tuples become lists and nested structures
+        are recursively cleaned.
         """
 
         if isinstance(value, dict):

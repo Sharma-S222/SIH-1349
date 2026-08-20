@@ -6,14 +6,6 @@ from state import TrackState
 
 @dataclass
 class MovementState:
-    """
-    Derived movement information for one tracked object.
-
-    This class describes movement only.
-    It does not decide whether the movement is dangerous,
-    suspicious, or a violation.
-    """
-
     track_id: int
 
     displacement: float
@@ -35,125 +27,139 @@ class MovementState:
             "total_distance": self.total_distance,
             "direction_degrees": self.direction_degrees,
             "direction": self.direction,
-            "speed_pixels_per_frame": (
-                self.speed_pixels_per_frame
-            ),
+            "speed_pixels_per_frame": self.speed_pixels_per_frame,
             "stationary": self.stationary,
-            "trajectory": [
-                list(point)
-                for point in self.trajectory
-            ],
+            "trajectory": self.trajectory,
         }
 
 
 class MovementAnalyzer:
-    """
-    Calculates movement from TrackState position history.
-
-    The analyzer intentionally does not generate events.
-
-    Example:
-
-        TrackState
-            ↓
-        MovementAnalyzer
-            ↓
-        MovementState
-            ↓
-        Event/Safety logic
-    """
 
     def __init__(
         self,
         stationary_threshold: float = 2.0,
         analysis_window: int = 5,
     ):
-        if stationary_threshold < 0:
-            raise ValueError(
-                "stationary_threshold cannot be negative"
-            )
-
-        if analysis_window < 2:
-            raise ValueError(
-                "analysis_window must be at least 2"
-            )
-
-        self.stationary_threshold = (
+        self.stationary_threshold = float(
             stationary_threshold
         )
 
-        self.analysis_window = analysis_window
+        self.analysis_window = max(
+            2,
+            int(analysis_window),
+        )
 
     def analyze(
         self,
         state: TrackState,
     ) -> MovementState:
 
-        history = list(state.foot_history)
+        history = list(
+            state.foot_history
+        )
 
-        # -------------------------------------------------
-        # Not enough history
-        # -------------------------------------------------
+        # ----------------------------------------------------
+        # No movement history
+        # ----------------------------------------------------
 
-        if len(history) < 2:
+        if not history:
 
-            return MovementState(
-                track_id=state.track_id,
-                displacement=0.0,
-                total_distance=0.0,
-                direction_degrees=0.0,
-                direction="stationary",
-                speed_pixels_per_frame=0.0,
-                stationary=True,
-                trajectory=history,
+            return self._stationary_state(
+                state,
+                [],
             )
 
-        # -------------------------------------------------
-        # Use only the most recent analysis window.
-        # -------------------------------------------------
+        # ----------------------------------------------------
+        # Use only the most recent positions
+        # ----------------------------------------------------
 
-        recent_history = history[
+        history = history[
             -self.analysis_window:
         ]
 
-        previous = recent_history[0]
-        current = recent_history[-1]
+        if len(history) < 2:
 
-        dx = current[0] - previous[0]
-        dy = current[1] - previous[1]
+            return self._stationary_state(
+                state,
+                history,
+            )
 
-        # -------------------------------------------------
-        # Net displacement
-        # -------------------------------------------------
+        # ----------------------------------------------------
+        # Start and current positions
+        # ----------------------------------------------------
+
+        start_x, start_y = history[0]
+        current_x, current_y = history[-1]
+
+        dx = current_x - start_x
+        dy = current_y - start_y
 
         displacement = sqrt(
             dx * dx
             + dy * dy
         )
 
-        # -------------------------------------------------
+        # ----------------------------------------------------
         # Total travelled distance
-        # -------------------------------------------------
+        #
+        # This is different from displacement.
+        #
+        # Displacement:
+        #     start → current
+        #
+        # Total distance:
+        #     sum of every movement segment
+        # ----------------------------------------------------
 
         total_distance = 0.0
 
-        for i in range(1, len(recent_history)):
+        for i in range(1, len(history)):
 
-            x1, y1 = recent_history[i - 1]
-            x2, y2 = recent_history[i]
+            previous_x, previous_y = (
+                history[i - 1]
+            )
+
+            next_x, next_y = history[i]
 
             segment_distance = sqrt(
-                (x2 - x1) ** 2
-                + (y2 - y1) ** 2
+                (next_x - previous_x) ** 2
+                + (next_y - previous_y) ** 2
             )
 
             total_distance += segment_distance
 
-        # -------------------------------------------------
-        # Direction
-        # -------------------------------------------------
+        # ----------------------------------------------------
+        # Average speed
+        # ----------------------------------------------------
 
-        if displacement > 0.0:
+        frame_intervals = len(history) - 1
+
+        speed = (
+            total_distance / frame_intervals
+            if frame_intervals > 0
+            else 0.0
+        )
+
+        # ----------------------------------------------------
+        # Stationary detection
+        #
+        # Use average movement rather than one noisy frame.
+        # ----------------------------------------------------
+
+        stationary = (
+            speed < self.stationary_threshold
+        )
+
+        # ----------------------------------------------------
+        # Direction
+        # ----------------------------------------------------
+
+        if displacement <= self.stationary_threshold:
+
+            direction_degrees = 0.0
+            direction = "stationary"
+
+        else:
 
             direction_degrees = degrees(
                 atan2(
@@ -162,84 +168,61 @@ class MovementAnalyzer:
                 )
             )
 
-        else:
-            direction_degrees = 0.0
-
-        direction = self._direction_name(
-            dx,
-            dy,
-            displacement,
-        )
-
-        # -------------------------------------------------
-        # Average speed over the analyzed frames
-        # -------------------------------------------------
-
-        frame_span = len(recent_history) - 1
-
-        if frame_span > 0:
-            speed = (
-                total_distance
-                / frame_span
+            direction = self._direction_name(
+                direction_degrees
             )
-        else:
-            speed = 0.0
-
-        # -------------------------------------------------
-        # Stationary classification
-        # -------------------------------------------------
-
-        stationary = (
-            speed < self.stationary_threshold
-        )
 
         return MovementState(
             track_id=state.track_id,
+
             displacement=round(
                 displacement,
                 2,
             ),
+
             total_distance=round(
                 total_distance,
                 2,
             ),
+
             direction_degrees=round(
                 direction_degrees,
                 2,
             ),
+
             direction=direction,
+
             speed_pixels_per_frame=round(
                 speed,
                 2,
             ),
+
             stationary=stationary,
-            trajectory=recent_history,
+
+            trajectory=history.copy(),
+        )
+
+    def _stationary_state(
+        self,
+        state: TrackState,
+        history: list[tuple[float, float]],
+    ) -> MovementState:
+
+        return MovementState(
+            track_id=state.track_id,
+            displacement=0.0,
+            total_distance=0.0,
+            direction_degrees=0.0,
+            direction="stationary",
+            speed_pixels_per_frame=0.0,
+            stationary=True,
+            trajectory=history.copy(),
         )
 
     @staticmethod
     def _direction_name(
-        dx: float,
-        dy: float,
-        displacement: float,
+        angle: float,
     ) -> str:
-        """
-        Convert movement vector into a coarse direction.
-
-        Image coordinates are used:
-
-            right = +X
-            down  = +Y
-        """
-
-        if displacement <= 0.0:
-            return "stationary"
-
-        angle = degrees(
-            atan2(
-                dy,
-                dx,
-            )
-        )
 
         if -22.5 <= angle < 22.5:
             return "right"
@@ -253,10 +236,7 @@ class MovementAnalyzer:
         if 112.5 <= angle < 157.5:
             return "down-left"
 
-        if (
-            angle >= 157.5
-            or angle < -157.5
-        ):
+        if angle >= 157.5 or angle < -157.5:
             return "left"
 
         if -157.5 <= angle < -112.5:
