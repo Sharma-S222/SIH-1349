@@ -1,60 +1,107 @@
 import json
-from datetime import datetime
-from typing import Any, Dict, Literal, Optional
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, validator
 
 
 class Evidence(BaseModel):
-    snapshot_path: Optional[str] = Field(None, max_length=2048)
-    clip_path: Optional[str] = Field(None, max_length=2048)
+    snapshot_path: Optional[str] = Field(None, max_length=2048, description="Path to image snapshot (relative or URL)")
+    clip_path: Optional[str] = Field(None, max_length=2048, description="Path to video clip (relative or URL)")
 
 
 class AIEvent(BaseModel):
-    schema_version: str = Field(..., min_length=1, max_length=20, description="Schema version, e.g. '1.0'")
-    event_id: str = Field(..., min_length=1, max_length=100, description="Unique event identifier")
-    camera_id: str = Field(..., min_length=1, max_length=50, description="Camera identifier, e.g. 'CAM_04'")
-    timestamp: str = Field(..., description="ISO-8601 formatted timestamp (timezone-aware)")
-    event_type: str = Field(..., min_length=1, max_length=100, description="Type of event")
-    severity: Literal["LOW", "MEDIUM", "HIGH", "CRITICAL"]
-    confidence: float = Field(..., ge=0, le=1, description="Confidence score 0-1")
-    zone_id: Optional[str] = Field(None, max_length=100, description="Zone identifier, optional per event type")
-    people_count: Optional[int] = Field(None, ge=0, description="People count, optional")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional structured AI metadata")
-    evidence: Evidence = Field(default_factory=Evidence)
+    """Canonical event-v1 schema-compliant event model.
 
-    @field_validator("metadata")
-    @classmethod
+    This model validates events against the repository-level contract at
+    docs/contracts/event-v1.schema.json.
+    """
+
+    schema_version: str = Field(
+        ...,
+        description="Canonical schema version identifier. Must be 'event-v1'.",
+    )
+    event_id: str = Field(
+        ...,
+        min_length=1,
+        max_length=100,
+        description="Unique event identifier",
+    )
+    camera_id: str = Field(
+        ...,
+        min_length=1,
+        max_length=50,
+        description="Camera identifier",
+    )
+    timestamp: int = Field(
+        ...,
+        ge=0,
+        description="Unix epoch milliseconds UTC (e.g. 1787218200000)",
+    )
+    event_type: str = Field(
+        ...,
+        min_length=1,
+        max_length=100,
+        description="Type of event, e.g. crowding, intrusion, loitering",
+    )
+    severity: str = Field(
+        ...,
+        description="Severity level. Use uppercase: LOW, MEDIUM, HIGH, CRITICAL",
+    )
+    confidence: float = Field(
+        ...,
+        ge=0.0,
+        le=1.0,
+        description="Event confidence score",
+    )
+    track_ids: Optional[List[str]] = Field(
+        None,
+        description="Optional track identifiers associated with the event",
+    )
+    zone_id: Optional[str] = Field(
+        None,
+        max_length=100,
+        description="Optional zone identifier",
+    )
+    persistence_ms: Optional[int] = Field(
+        None,
+        ge=0,
+        description="Optional persistence duration in milliseconds",
+    )
+    people_count: Optional[int] = Field(
+        None,
+        ge=0,
+        description="Optional people count from crowd analysis",
+    )
+    metadata: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Optional extensible metadata (do not move explicit contract fields here)",
+    )
+    evidence: Evidence = Field(
+        default_factory=Evidence,
+        description="Optional snapshot and clip path references",
+    )
+
+    @validator("schema_version")
+    def validate_schema_version(cls, v: str) -> str:
+        if v != "event-v1":
+            raise ValueError("schema_version must be 'event-v1'")
+        return v
+
+    @validator("timestamp")
+    def validate_epoch_milliseconds(cls, v: int) -> int:
+        """Validate that timestamp is a non-negative integer (Unix epoch milliseconds).
+
+        Accepts int values directly. Rejects strings, floats, or negative numbers.
+        """
+        if not isinstance(v, int):
+            raise ValueError("timestamp must be an integer (Unix epoch milliseconds)")
+        if v < 0:
+            raise ValueError("timestamp must be non-negative (Unix epoch milliseconds in UTC)")
+        return v
+
+    @validator("metadata")
     def validate_metadata_size(cls, value: Dict[str, Any]) -> Dict[str, Any]:
         if len(json.dumps(value, separators=(",", ":"), default=str).encode("utf-8")) > 65_536:
             raise ValueError("metadata must not exceed 64 KiB when JSON encoded")
         return value
-
-    @field_validator("timestamp")
-    @classmethod
-    def validate_iso_timestamp(cls, v: str) -> str:
-        """Validate and normalise ISO-8601 timestamp.
-
-        Accepts both offset form (e.g. '2026-08-20T09:30:00+05:30')
-        and Z-suffix form (e.g. '2026-08-20T04:00:00Z').
-        Raises ValueError if the string cannot be parsed as a
-        timezone-aware datetime.
-        """
-        normalised = v.replace("Z", "+00:00")
-        try:
-            parsed = datetime.fromisoformat(normalised)
-        except (ValueError, TypeError):
-            raise ValueError(
-                "timestamp must be a valid ISO-8601 timezone-aware datetime "
-                "(e.g. '2026-08-20T09:30:00+05:30' or '2026-08-20T04:00:00Z')"
-            )
-        # Reject naive (no timezone) datetimes
-        if parsed.tzinfo is None:
-            raise ValueError(
-                "timestamp must include a timezone offset "
-                "(e.g. '+05:30' or 'Z')"
-            )
-        return v
-
-
-EventCreate = AIEvent

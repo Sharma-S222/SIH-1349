@@ -18,9 +18,31 @@ def generate_event_id() -> str:
     return f"EVT_{uuid.uuid4()}"
 
 
+def utc_timestamp_epoch_ms() -> int:
+    """Return the current Unix epoch time in milliseconds UTC.
+
+    This is the canonical timestamp format for event-v1 payloads.
+    Contrast with utc_timestamp() which returns ISO-8601 strings for
+    query filters and internal database storage.
+    """
+    return int(time.time() * 1000)
+
+
 def utc_timestamp() -> str:
-    """Return a timezone-aware ISO-8601 UTC timestamp using the accepted Z form."""
+    """Return a timezone-aware ISO-8601 UTC timestamp using the accepted Z form.
+
+    Used for query filters (start_time/end_time) and internal database
+    representation, NOT for event payload timestamps.
+    """
     return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
+def _error_code(payload: dict[str, Any] | None) -> str | None:
+    return payload.get("error", {}).get("code") if payload else None
+
+
+def _message(payload: dict[str, Any] | None, fallback: Any) -> str:
+    return str(payload.get("error", {}).get("message", fallback)) if payload else str(fallback)
 
 
 @dataclass(frozen=True)
@@ -77,6 +99,7 @@ class BackendEventClient:
 
         return EventSendResult(False, None, None, "event request failed")
 
+
     @staticmethod
     def _decode(raw: bytes) -> dict[str, Any] | None:
         if not raw:
@@ -87,9 +110,11 @@ class BackendEventClient:
         except (UnicodeDecodeError, json.JSONDecodeError):
             return {"error": {"code": "INVALID_RESPONSE", "message": "backend returned non-JSON data"}}
 
+
     @staticmethod
     def _error_code(payload: dict[str, Any] | None) -> str | None:
         return payload.get("error", {}).get("code") if payload else None
+
 
     @staticmethod
     def _message(payload: dict[str, Any] | None, fallback: Any) -> str:

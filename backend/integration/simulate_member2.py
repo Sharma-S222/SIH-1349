@@ -1,13 +1,28 @@
 #!/usr/bin/env python
-"""Send representative Member 2 Contract V1 events to a running backend."""
+"""Send representative Member 2 Contract V1 events to a running backend.
 
+Events emitted here are designed to be accepted directly by POST /api/events
+without any backend-specific translation. They conform to the canonical
+event-v1 schema at docs/contracts/event-v1.schema.json.
+
+SCENARIOS:
+- intrusion:  restricted_zone_intrusion, HIGH, no people_count
+- fall:     fall_detected, CRITICAL, no people_count
+- abandoned-object:  abandoned_object, HIGH, no people_count
+- crowd-overload:  crowd_overload, HIGH, 75 people
+- fire:       fire_or_smoke, CRITICAL, no people_count
+
+Each event uses:
+  schema_version = "event-v1"
+  timestamp = integer Unix epoch milliseconds UTC
+  canonical fields as documented in API_CONTRACT_V1.md
+"""
 import argparse
 import json
+import time
+import uuid
 
-try:
-    from .member2_backend_client import BackendEventClient, generate_event_id, utc_timestamp
-except ImportError:  # Direct script execution from the integration directory.
-    from member2_backend_client import BackendEventClient, generate_event_id, utc_timestamp
+from .member2_backend_client import BackendEventClient, generate_event_id, utc_timestamp_epoch_ms
 
 
 SCENARIOS = {
@@ -22,10 +37,10 @@ SCENARIOS = {
 def build_event(scenario: str) -> dict:
     event_type, severity, people_count = SCENARIOS[scenario]
     event = {
-        "schema_version": "1.0",
+        "schema_version": "event-v1",
         "event_id": generate_event_id(),
         "camera_id": "CAM_04",
-        "timestamp": utc_timestamp(),
+        "timestamp": utc_timestamp_epoch_ms(),
         "event_type": event_type,
         "severity": severity,
         "confidence": 0.93,
@@ -35,6 +50,9 @@ def build_event(scenario: str) -> dict:
     }
     if people_count is not None:
         event["people_count"] = people_count
+    # Optional canonical fields (included when relevant)
+    # track_ids and persistence_ms are optional; omitted here by default
+    # people_count is included when the scenario has a value
     return event
 
 

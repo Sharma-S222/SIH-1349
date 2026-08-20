@@ -1,6 +1,6 @@
 import json
 import logging
-from datetime import datetime as _dt
+from datetime import datetime, timezone as _tz
 
 from fastapi import APIRouter, HTTPException, Query, status
 from sqlalchemy import select
@@ -145,7 +145,7 @@ async def create_event(event: AIEvent):
                 },
             },
         )
-    parsed_timestamp = _dt.fromisoformat(event.timestamp.replace("Z", "+00:00"))
+    parsed_timestamp = datetime.fromtimestamp(event.timestamp / 1000.0, tz=_tz.utc)
     db = SessionLocal()
     try:
         db_event = Event(
