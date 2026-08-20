@@ -133,7 +133,7 @@ class WebcamVideoSource(VideoSource):
         if not ret:
             return None
         h, w = bgr.shape[:2]
-        timestamp_ms = time.monotonic() * 1000
+        timestamp_ms = int(time.monotonic() * 1000)
         self.state.record_frame(timestamp_ms)
         return Frame(
             camera_id=self.camera_id,

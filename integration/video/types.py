@@ -23,7 +23,7 @@ class Frame:
 
     camera_id: str
     frame_index: int
-    timestamp_ms: float
+    timestamp_ms: int  # milliseconds — aligns with detection-v1 contract (integer)
     frame: np.ndarray  # uint8, HxWx3, BGR
     width: int
     height: int
@@ -57,15 +57,15 @@ class CameraState:
     camera_id: str
     connection_status: ConnectionStatus = ConnectionStatus.DISCONNECTED
     frame_index: int = 0
-    last_timestamp_ms: float = 0.0
+    last_timestamp_ms: int = 0
     frames_received: int = 0
     frames_skipped: int = 0
     last_error: Optional[str] = None
 
-    def record_frame(self, timestamp_ms: Optional[float] = None):
+    def record_frame(self, timestamp_ms: Optional[int] = None):
         self.frame_index += 1
         self.frames_received += 1
-        self.last_timestamp_ms = timestamp_ms or (time.time() * 1000)
+        self.last_timestamp_ms = timestamp_ms if timestamp_ms is not None else int(time.time() * 1000)
 
     def record_skip(self):
         self.frames_skipped += 1

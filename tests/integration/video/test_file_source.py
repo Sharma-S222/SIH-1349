@@ -48,6 +48,7 @@ class TestFileVideoSource:
         assert frame.frame.dtype == np.uint8
         assert frame.frame.shape == (240, 320, 3)
         assert frame.source_type == "file"
+        assert isinstance(frame.timestamp_ms, int), "timestamp_ms must be int (detection-v1 contract)"
 
         src.close()
         assert src.is_open() is False
