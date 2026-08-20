@@ -1,0 +1,63 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "event-v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "event_id",
+    "camera_id",
+    "timestamp",
+    "event_type",
+    "severity",
+    "confidence"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Version identifier for the contract, e.g. event-v1"
+    },
+    "event_id": {
+      "type": "string",
+      "description": "Unique event identifier"
+    },
+    "camera_id": {
+      "type": "string",
+      "description": "Camera identifier"
+    },
+    "timestamp": {
+      "type": "integer",
+      "description": "Timestamp in milliseconds"
+    },
+    "event_type": {
+      "type": "string",
+      "description": "Type of event, e.g. crowding, intrusion, loitering"
+    },
+    "severity": {
+      "type": "string",
+      "description": "Severity level, e.g. low, medium, high"
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "Event confidence score"
+    },
+    "track_ids": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Optional track identifiers"
+    },
+    "zone_id": {
+      "type": "string",
+      "description": "Optional zone identifier"
+    },
+    "persistence_ms": {
+      "type": "integer",
+      "description": "Optional persistence duration in milliseconds"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Optional extensible metadata"
+    }
+  }
+}
