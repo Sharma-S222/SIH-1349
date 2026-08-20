@@ -27,7 +27,10 @@ class SafetyEvent:
         return {
             "event_type": self.event_type,
             "severity": self.severity,
-            "confidence": self.confidence,
+            "confidence": round(
+                float(self.confidence),
+                4,
+            ),
             "track_id": self.track_id,
             "zone_id": self.zone_id,
             "frame_index": self.frame_index,
@@ -39,16 +42,43 @@ class SafetyEvent:
 
 
 class EventEngine:
+    """
+    Converts tracking, state, movement, and zone information
+    into discrete safety events.
+
+    This class does not perform detection or tracking.
+    It only interprets already-refined data.
+    """
 
     def __init__(
         self,
         intrusion_min_frames: int = 3,
     ):
+        if intrusion_min_frames < 1:
+            raise ValueError(
+                "intrusion_min_frames must be at least 1"
+            )
+
         self.intrusion_min_frames = (
             intrusion_min_frames
         )
 
+        # Tracks which objects have already generated
+        # a zone-entry event for a particular zone.
         self.zone_entry_events: set[
+            tuple[int, str]
+        ] = set()
+
+        # Number of consecutive frames an object has
+        # remained inside a restricted zone.
+        self.restricted_zone_frames: dict[
+            tuple[int, str],
+            int,
+        ] = {}
+
+        # Prevent repeated intrusion events while the
+        # same track remains continuously inside the zone.
+        self.active_intrusions: set[
             tuple[int, str]
         ] = set()
 
@@ -61,26 +91,29 @@ class EventEngine:
         timestamp_ms: int,
     ) -> list[SafetyEvent]:
 
-        events = []
+        events: list[SafetyEvent] = []
 
-        # --------------------------------
-        # Zone entry
-        # --------------------------------
+        track_id = state.track_id
+        current_zone = transition.current_zone
+        previous_zone = transition.previous_zone
+
+        # =================================================
+        # ZONE ENTRY
+        # =================================================
 
         if transition.entered:
 
-            zone_id = transition.current_zone
-
-            if zone_id is not None:
+            if current_zone is not None:
 
                 event_key = (
-                    state.track_id,
-                    zone_id,
+                    track_id,
+                    current_zone,
                 )
 
-                # Only generate one entry event
-                # for this track entering this zone.
-                if event_key not in self.zone_entry_events:
+                if (
+                    event_key
+                    not in self.zone_entry_events
+                ):
 
                     self.zone_entry_events.add(
                         event_key
@@ -91,31 +124,44 @@ class EventEngine:
                             event_type="zone_entry",
                             severity="INFO",
                             confidence=state.confidence,
-                            track_id=state.track_id,
-                            zone_id=zone_id,
+                            track_id=track_id,
+                            zone_id=current_zone,
                             frame_index=frame_index,
                             timestamp_ms=timestamp_ms,
-                            persistence_frames=state.frame_count,
+                            persistence_frames=1,
                             movement=movement.to_dict(),
-                            zone_transition=transition.to_dict(),
+                            zone_transition=(
+                                transition.to_dict()
+                            ),
                         )
                     )
 
-        # --------------------------------
-        # Zone exit
-        # --------------------------------
+        # =================================================
+        # ZONE EXIT
+        # =================================================
 
         if transition.exited:
 
-            zone_id = transition.previous_zone
+            if previous_zone is not None:
 
-            if zone_id is not None:
+                event_key = (
+                    track_id,
+                    previous_zone,
+                )
 
                 self.zone_entry_events.discard(
-                    (
-                        state.track_id,
-                        zone_id,
-                    )
+                    event_key
+                )
+
+                # Clear any restricted-zone state
+                # when the object leaves the zone.
+                self.restricted_zone_frames.pop(
+                    event_key,
+                    None,
+                )
+
+                self.active_intrusions.discard(
+                    event_key
                 )
 
                 events.append(
@@ -123,56 +169,129 @@ class EventEngine:
                         event_type="zone_exit",
                         severity="INFO",
                         confidence=state.confidence,
-                        track_id=state.track_id,
-                        zone_id=zone_id,
+                        track_id=track_id,
+                        zone_id=previous_zone,
                         frame_index=frame_index,
                         timestamp_ms=timestamp_ms,
-                        persistence_frames=state.frame_count,
+                        persistence_frames=1,
                         movement=movement.to_dict(),
-                        zone_transition=transition.to_dict(),
+                        zone_transition=(
+                            transition.to_dict()
+                        ),
                     )
                 )
 
-        # --------------------------------
-        # Restricted-zone intrusion
-        # --------------------------------
+        # =================================================
+        # RESTRICTED ZONE INTRUSION
+        # =================================================
 
-        if (
-            transition.current_zone
-            == "TRACK_RESTRICTED"
-        ):
+        if current_zone == "TRACK_RESTRICTED":
 
+            event_key = (
+                track_id,
+                current_zone,
+            )
+
+            current_persistence = (
+                self.restricted_zone_frames.get(
+                    event_key,
+                    0,
+                )
+                + 1
+            )
+
+            self.restricted_zone_frames[
+                event_key
+            ] = current_persistence
+
+            # Generate exactly one intrusion event
+            # after the required persistence threshold.
             if (
-                state.frame_count
+                current_persistence
                 >= self.intrusion_min_frames
+                and event_key
+                not in self.active_intrusions
             ):
+
+                self.active_intrusions.add(
+                    event_key
+                )
 
                 events.append(
                     SafetyEvent(
-                        event_type="restricted_zone_intrusion",
+                        event_type=(
+                            "restricted_zone_intrusion"
+                        ),
                         severity="HIGH",
                         confidence=state.confidence,
-                        track_id=state.track_id,
-                        zone_id=transition.current_zone,
+                        track_id=track_id,
+                        zone_id=current_zone,
                         frame_index=frame_index,
                         timestamp_ms=timestamp_ms,
-                        persistence_frames=state.frame_count,
+                        persistence_frames=(
+                            current_persistence
+                        ),
                         movement=movement.to_dict(),
-                        zone_transition=transition.to_dict(),
+                        zone_transition=(
+                            transition.to_dict()
+                        ),
                     )
                 )
+
+        else:
+            # Object is not currently in the restricted
+            # zone, so its persistence counter is irrelevant.
+            for key in list(
+                self.restricted_zone_frames
+            ):
+                if key[0] == track_id:
+                    self.restricted_zone_frames.pop(
+                        key,
+                        None,
+                    )
+
+            for key in list(
+                self.active_intrusions
+            ):
+                if key[0] == track_id:
+                    self.active_intrusions.discard(
+                        key
+                    )
 
         return events
 
     def reset_track(
         self,
         track_id: int,
-    ):
+    ) -> None:
+        """
+        Remove all event state associated with a track.
+        """
+
         self.zone_entry_events = {
             key
             for key in self.zone_entry_events
             if key[0] != track_id
         }
 
-    def reset(self):
+        self.restricted_zone_frames = {
+            key: value
+            for key, value
+            in self.restricted_zone_frames.items()
+            if key[0] != track_id
+        }
+
+        self.active_intrusions = {
+            key
+            for key in self.active_intrusions
+            if key[0] != track_id
+        }
+
+    def reset(self) -> None:
+        """
+        Reset all event state.
+        """
+
         self.zone_entry_events.clear()
+        self.restricted_zone_frames.clear()
+        self.active_intrusions.clear()

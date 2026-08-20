@@ -1,11 +1,12 @@
 import json
 from pathlib import Path
+from typing import Any
 
 from adapter import adapt_detections
 from tracker import TrackerWrapper
 from state import TrackStateManager
 from movement import MovementAnalyzer
-from zones import ZoneEngine
+from zones import Zone, ZoneEngine
 from events import EventEngine
 from ouput import EventOutput
 
@@ -17,6 +18,8 @@ from ouput import EventOutput
 INPUT_DIR = Path("outputs/test_input")
 OUTPUT_DIR = "outputs/events"
 
+CAMERA_ID = None
+
 
 # ============================================================
 # LOAD MEMBER 1 INPUT
@@ -24,7 +27,7 @@ OUTPUT_DIR = "outputs/events"
 
 def load_frames():
     """
-    Load synthetic Member 1 detection-v1 frames
+    Load Member 1 detection JSON frames
     in chronological order.
     """
 
@@ -34,8 +37,7 @@ def load_frames():
 
     for file_path in files:
 
-        with open(
-            file_path,
+        with file_path.open(
             "r",
             encoding="utf-8",
         ) as file:
@@ -47,13 +49,13 @@ def load_frames():
 # ERROR OUTPUT
 # ============================================================
 
-def print_error(error):
+def print_error(error: Exception):
     """
     Print errors as structured JSON.
     """
 
     error_output = {
-        "schema_version": "1.0",
+        "schema_version": "1.1",
         "status": "error",
         "error": {
             "type": type(error).__name__,
@@ -71,121 +73,29 @@ def print_error(error):
 
 
 # ============================================================
-# EVENT EXTRACTION
+# ZONE CONFIGURATION
 # ============================================================
 
-def extract_event_fields(event):
+def create_zones() -> list[Zone]:
     """
-    Convert either an Event object or dictionary
-    into the fields required by event-v1.
+    Create configured safety zones.
+
+    Replace the polygon with the actual track
+    restricted-area coordinates later.
     """
 
-    if isinstance(event, dict):
-
-        return {
-            "event_type": event.get(
-                "event_type",
-                "unknown",
-            ),
-
-            "severity": event.get(
-                "severity",
-                "INFO",
-            ),
-
-            "confidence": float(
-                event.get(
-                    "confidence",
-                    0.0,
-                )
-            ),
-
-            "track_ids": event.get(
-                "track_ids",
-                [],
-            ),
-
-            "zone_id": event.get(
-                "zone_id"
-            ),
-
-            "persistence_ms": int(
-                event.get(
-                    "persistence_ms",
-                    0,
-                )
-            ),
-
-            "metadata": event.get(
-                "metadata",
-                {},
-            ),
-
-            "event_id": event.get(
-                "event_id"
-            ),
-        }
-
-    track_id = getattr(
-        event,
-        "track_id",
-        None,
-    )
-
-    if track_id is None:
-        track_ids = []
-    else:
-        track_ids = [track_id]
-
-    return {
-        "event_type": getattr(
-            event,
-            "event_type",
-            "unknown",
-        ),
-
-        "severity": getattr(
-            event,
-            "severity",
-            "INFO",
-        ),
-
-        "confidence": float(
-            getattr(
-                event,
-                "confidence",
-                0.0,
-            )
-        ),
-
-        "track_ids": track_ids,
-
-        "zone_id": getattr(
-            event,
-            "zone_id",
-            None,
-        ),
-
-        "persistence_ms": int(
-            getattr(
-                event,
-                "persistence_ms",
-                0,
-            )
-        ),
-
-        "metadata": getattr(
-            event,
-            "metadata",
-            {},
-        ),
-
-        "event_id": getattr(
-            event,
-            "event_id",
-            None,
-        ),
-    }
+    return [
+        Zone(
+            zone_id="TRACK_RESTRICTED",
+            name="Track Restricted Area",
+            polygon=[
+                (300.0, 700.0),
+                (800.0, 700.0),
+                (800.0, 1080.0),
+                (300.0, 1080.0),
+            ],
+        )
+    ]
 
 
 # ============================================================
@@ -197,7 +107,7 @@ def main():
     try:
 
         # ----------------------------------------------------
-        # Load frames
+        # Load Member 1 frames
         # ----------------------------------------------------
 
         frames = load_frames()
@@ -205,7 +115,7 @@ def main():
         # ----------------------------------------------------
         # Initialize pipeline ONCE
         #
-        # These objects must persist across frames.
+        # These objects maintain information across frames.
         # ----------------------------------------------------
 
         tracker = TrackerWrapper()
@@ -219,41 +129,13 @@ def main():
             stationary_threshold=2.0,
         )
 
-        # ----------------------------------------------------
-        # Restricted zone
-        #
-        # Replace these coordinates with the actual
-        # restricted-zone polygon.
-        # ----------------------------------------------------
-
-        zones = [
-            {
-                "zone_id": "TRACK_RESTRICTED",
-
-                "polygon": [
-                    (300, 700),
-                    (800, 700),
-                    (800, 1080),
-                    (300, 1080),
-                ],
-            }
-        ]
-
         zone_engine = ZoneEngine(
-            zones=zones
+            zones=create_zones()
         )
-
-        # ----------------------------------------------------
-        # Event engine
-        # ----------------------------------------------------
 
         event_engine = EventEngine(
             intrusion_min_frames=3,
         )
-
-        # ----------------------------------------------------
-        # Final output
-        # ----------------------------------------------------
 
         event_output = EventOutput(
             output_dir=OUTPUT_DIR
@@ -265,163 +147,111 @@ def main():
 
         for data in frames:
 
-            camera_id = data.get(
-                "camera_id"
+            frame_index = int(
+                data.get(
+                    "frame_index",
+                    0,
+                )
             )
 
-            # ================================================
+            timestamp_ms = int(
+                data.get(
+                    "timestamp_ms",
+                    0,
+                )
+            )
+
+            # =================================================
             # MEMBER 1 → ADAPTER
-            # ================================================
+            # =================================================
 
             detections = adapt_detections(
                 data
             )
 
-            # ================================================
+            # =================================================
             # ADAPTER → TRACKER
-            # ================================================
+            # =================================================
 
             tracks = tracker.update(
                 detections
             )
 
-            # ================================================
+            # =================================================
             # TRACKER → STATE
-            # ================================================
+            # =================================================
 
             states = state_manager.update(
                 tracks,
-                frame_index=data[
-                    "frame_index"
-                ],
+                frame_index=frame_index,
             )
 
-            # ================================================
-            # STATE → MOVEMENT
-            # ================================================
-
-            movements = {}
+            # =================================================
+            # PROCESS STATES
+            # =================================================
 
             for state in states:
 
-                movements[
-                    state.track_id
-                ] = movement_analyzer.analyze(
-                    state
+                # ---------------------------------------------
+                # STATE → MOVEMENT
+                # ---------------------------------------------
+
+                movement = (
+                    movement_analyzer.analyze(
+                        state
+                    )
                 )
 
-            # ================================================
-            # STATE → ZONE
-            # ================================================
+                # ---------------------------------------------
+                # STATE → ZONE
+                # ---------------------------------------------
 
-            transitions = {}
-
-            for state in states:
-
-                transitions[
-                    state.track_id
-                ] = zone_engine.update(
-                    track_id=state.track_id,
-                    point=state.foot_point,
+                transition = (
+                    zone_engine.update(
+                        track_id=state.track_id,
+                        point=state.foot_point,
+                    )
                 )
 
-            # ================================================
-            # EVENT ENGINE
-            # ================================================
+                # Keep state synchronized with
+                # the zone engine.
 
-            for state in states:
-
-                movement = movements.get(
-                    state.track_id
+                state.set_zone(
+                    transition.current_zone
                 )
 
-                transition = transitions.get(
-                    state.track_id
-                )
-
-                if movement is None:
-                    continue
-
-                if transition is None:
-                    continue
+                # ---------------------------------------------
+                # MOVEMENT + ZONE + STATE
+                # → EVENT ENGINE
+                # ---------------------------------------------
 
                 events = event_engine.process(
                     state=state,
                     movement=movement,
                     transition=transition,
-                    frame_index=data[
-                        "frame_index"
-                    ],
-                    timestamp_ms=data[
-                        "timestamp_ms"
-                    ],
+                    frame_index=frame_index,
+                    timestamp_ms=timestamp_ms,
                 )
 
-                if events is None:
+                if not events:
                     continue
 
-                # Support one event or a list
-                if not isinstance(
-                    events,
-                    list,
-                ):
-                    events = [events]
-
-                # ============================================
-                # EVENT → EVENT-V1
-                # ============================================
+                # ---------------------------------------------
+                # EVENT → FINAL JSON
+                # ---------------------------------------------
 
                 for event in events:
 
-                    fields = extract_event_fields(
-                        event
-                    )
-
                     payload = (
                         event_output.build_event(
-                            event_type=fields[
-                                "event_type"
-                            ],
-
-                            camera_id=camera_id,
-
-                            timestamp_ms=data[
-                                "timestamp_ms"
-                            ],
-
-                            track_ids=fields[
-                                "track_ids"
-                            ],
-
-                            zone_id=fields[
-                                "zone_id"
-                            ],
-
-                            confidence=fields[
-                                "confidence"
-                            ],
-
-                            severity=fields[
-                                "severity"
-                            ],
-
-                            persistence_ms=fields[
-                                "persistence_ms"
-                            ],
-
-                            metadata=fields[
-                                "metadata"
-                            ],
-
-                            event_id=fields[
-                                "event_id"
-                            ],
+                            event=event,
+                            camera_id=CAMERA_ID,
                         )
                     )
 
-                    # ========================================
-                    # ONLY SUCCESS OUTPUT
-                    # ========================================
+                    # -----------------------------------------
+                    # PRINT RAW JSON
+                    # -----------------------------------------
 
                     print(
                         event_output.to_json(
@@ -429,19 +259,15 @@ def main():
                         )
                     )
 
-                    # ========================================
-                    # SAVE EVENT
-                    # ========================================
+                    # -----------------------------------------
+                    # SAVE JSON
+                    # -----------------------------------------
 
                     event_output.save(
                         payload
                     )
 
     except Exception as error:
-
-        # ================================================
-        # ONLY ERROR OUTPUT
-        # ================================================
 
         print_error(error)
 

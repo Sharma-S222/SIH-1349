@@ -13,36 +13,42 @@ class Zone:
         point: tuple[float, float],
     ) -> bool:
         """
-        Ray-casting point-in-polygon test.
+        Determine whether a point lies inside the zone polygon.
+
+        Uses the ray-casting algorithm.
         """
+
+        if len(self.polygon) < 3:
+            return False
 
         x, y = point
         inside = False
 
-        n = len(self.polygon)
+        j = len(self.polygon) - 1
 
-        if n < 3:
-            return False
-
-        j = n - 1
-
-        for i in range(n):
-
+        for i in range(len(self.polygon)):
             xi, yi = self.polygon[i]
             xj, yj = self.polygon[j]
 
-            intersects = (
+            # Check whether the horizontal ray from the point
+            # crosses this polygon edge.
+            crosses = (
                 (yi > y) != (yj > y)
-                and
-                x
-                < (xj - xi)
-                * (y - yi)
-                / ((yj - yi) or 1e-12)
-                + xi
             )
 
-            if intersects:
-                inside = not inside
+            if crosses:
+                denominator = yj - yi
+
+                if abs(denominator) > 1e-12:
+                    intersection_x = (
+                        (xj - xi)
+                        * (y - yi)
+                        / denominator
+                        + xi
+                    )
+
+                    if x < intersection_x:
+                        inside = not inside
 
             j = i
 
@@ -51,7 +57,12 @@ class Zone:
 
 @dataclass
 class ZoneTransition:
+    """
+    Result of evaluating one tracked object's zone position.
+    """
+
     track_id: int
+
     previous_zone: str | None
     current_zone: str | None
 
@@ -71,25 +82,34 @@ class ZoneTransition:
 
 
 class ZoneEngine:
+    """
+    Determines which configured zone contains a tracked
+    object's reference point.
+
+    The engine does not generate safety events or messages.
+    It only produces zone information and transitions.
+    """
 
     def __init__(
         self,
         zones: list[Zone] | None = None,
     ):
-        self.zones = zones or []
-
-        self.track_zones: dict[
-            int,
-            str | None,
-        ] = {}
+        self.zones = list(zones or [])
 
     def get_zone(
         self,
         point: tuple[float, float],
     ) -> str | None:
+        """
+        Return the zone containing the point.
+
+        If the point is outside every configured zone,
+        return None.
+
+        If zones overlap, the first matching zone wins.
+        """
 
         for zone in self.zones:
-
             if zone.contains(point):
                 return zone.zone_id
 
@@ -99,32 +119,37 @@ class ZoneEngine:
         self,
         track_id: int,
         point: tuple[float, float],
+        previous_zone: str | None = None,
     ) -> ZoneTransition:
+        """
+        Evaluate the current zone for a tracked object.
 
-        previous_zone = self.track_zones.get(
-            track_id
-        )
+        `previous_zone` should normally come from TrackState.
+        This keeps TrackState as the source of truth rather
+        than maintaining a second copy of the same state here.
+        """
 
-        current_zone = self.get_zone(
-            point
-        )
+        current_zone = self.get_zone(point)
 
+        # ---------------------------------------------
+        # Zone transition semantics
+        # ---------------------------------------------
+
+        # Object was outside and is now inside.
         entered = (
-            current_zone is not None
-            and current_zone != previous_zone
+            previous_zone is None
+            and current_zone is not None
         )
 
+        # Object was inside and is now outside.
         exited = (
             previous_zone is not None
-            and current_zone != previous_zone
+            and current_zone is None
         )
 
+        # Any actual zone change.
         changed = (
-            current_zone != previous_zone
-        )
-
-        self.track_zones[track_id] = (
-            current_zone
+            previous_zone != current_zone
         )
 
         return ZoneTransition(
@@ -136,14 +161,39 @@ class ZoneEngine:
             changed=changed,
         )
 
-    def reset_track(
+    def update_state(
         self,
-        track_id: int,
-    ):
-        self.track_zones.pop(
-            track_id,
-            None,
+        state: Any,
+    ) -> ZoneTransition:
+        """
+        Convenience method for directly processing a TrackState.
+
+        The state object must provide:
+
+            track_id
+            foot_point
+            current_zone
+            set_zone()
+        """
+
+        transition = self.update(
+            track_id=state.track_id,
+            point=state.foot_point,
+            previous_zone=state.current_zone,
         )
 
-    def reset(self):
-        self.track_zones.clear()
+        state.set_zone(
+            transition.current_zone
+        )
+
+        return transition
+
+    def reset(self) -> None:
+        """
+        Kept for pipeline compatibility.
+
+        ZoneEngine no longer owns persistent track-zone state,
+        so there is nothing to clear here.
+        """
+
+        return None
