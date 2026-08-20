@@ -46,6 +46,7 @@ Connect to the real-time event stream:
 
 ```javascript
 const ws = new WebSocket('ws://localhost:8000/ws/events');
+```
 
 ws.onopen = () => {
   console.log('Connected to event stream');
@@ -64,13 +65,13 @@ ws.onclose = () => {
 ws.onerror = (err) => {
   console.error('WebSocket error:', err);
 };
-```
 
 **Requirements:**
 - Automatic reconnect on disconnect
 - Avoid creating unlimited reconnect timers (use setTimeout with delay)
 - Handle malformed messages safely (try/catch around JSON.parse)
 - Do not crash UI when backend temporarily disconnects
+```
 
 ---
 
@@ -109,13 +110,24 @@ function handleWebSocketMessage(message) {
 
 ---
 
-## 4. event.created Handling
+## 4. event.created Handling (canonical event-v1 shape)
 
-When a new event is created, the dashboard should:
+When a new event is created, the dashboard should destructure the canonical payload:
 
 ```javascript
 function handleEventCreated(eventData) {
-  const { event_id, camera_id, event_type, severity, confidence, timestamp } = eventData;
+  const {
+    event_id,
+    camera_id,
+    event_type,
+    severity,
+    confidence,
+    timestamp,       // Unix epoch milliseconds (e.g. 1787218200000)
+    track_ids,       // optional array of track IDs
+    zone_id,         // optional zone identifier
+    persistence_ms,  // optional persistence duration in ms
+    people_count     // optional people count
+  } = eventData;
 
   // Add event alert/card
   addEventAlert({
@@ -124,27 +136,42 @@ function handleEventCreated(eventData) {
     type: event_type,
     severity: severity,
     confidence: confidence,
-    time: timestamp,
+    time: timestamp,  // display as formatted date from epoch ms
   });
-
-  // Optionally fetch full REST detail if needed
-  // fetch(`http://localhost:8000/api/events/${event_id}`);
 
   // Highlight HIGH/CRITICAL severity appropriately
   if (severity === 'HIGH' || severity === 'CRITICAL') {
     highlightCriticalEvent(event_id);
+  }
+
+  // Optionally fetch full REST detail if needed
+  // fetch(`http://localhost:8000/api/events/${event_id}`);
+
+  // Track optional fields for display
+  if (track_ids !== undefined) {
+    console.log('Track IDs associated:', track_ids);
+  }
+  if (zone_id !== undefined) {
+    console.log('Zone ID:', zone_id);
+  }
+  if (people_count !== undefined) {
+    console.log('People count:', people_count);
+  }
+  if (persistence_ms !== undefined) {
+    console.log('Persistence ms:', persistence_ms);
   }
 }
 ```
 
 **Key actions:**
 - Add event alert/card to dashboard
-- Optionally fetch full REST detail if needed
+- Display timestamp formatted from Unix epoch milliseconds
 - Highlight HIGH/CRITICAL severity appropriately
+- Optionally display track_ids, zone_id, persistence_ms, people_count
 
 ---
 
-## 5. incident.updated Handling
+## 4. incident.updated Handling
 
 When an incident state changes (verify/dismiss/assign/resolve):
 
@@ -174,7 +201,7 @@ function handleIncidentUpdated(incidentData) {
 
 ---
 
-## 6. crowd.updated Handling
+## 5. crowd.updated Handling (canonical shape)
 
 When crowd metrics update:
 
@@ -185,18 +212,18 @@ function handleCrowdUpdated(crowdData) {
   // Update crowd count display
   updateCrowdCount(camera_id, people_count);
 
-  // Update timestamp display
+  // Update timestamp display (format from Unix epoch ms)
   updateCrowdTimestamp(camera_id, timestamp);
 
   // Optionally update chart data
-  // chartData[camera_id].push({ people_count, timestamp });
+  // chartData[camera_id].push({ people_count, timestamp: new Date(timestamp) });
   // chart.redraw();
 }
 ```
 
 **Key actions:**
 - Update crowd count display
-- Update timestamp display
+- Update timestamp display (format from Unix epoch ms)
 - Update chart data if chart is displayed
 
 ---
@@ -302,17 +329,17 @@ All API responses follow this format:
 { "ok": false, "error": { "code": "ERROR_CODE", "message": "..." } }
 ```
 
-**Check `response.ok` or `data.ok` before proceeding.** Never assume success without checking.
+**Check `response.ok` or `data.ok` before proceeding.**
 
 **Typical error codes:**
 - `DUPLICATE_EVENT` — same event_id already accepted (HTTP 409)
 - `INVALID_TRANSITION` — invalid state change (HTTP 409)
-- `INVALID_TIMESTAMP` — malformed timestamp (HTTP 400)
+- `INVALID_TIMESTAMP` — malformed timestamp (HTTP 400). **Note:** The backend expects integer epoch milliseconds for POST /api.events; ISO-8601 strings will be rejected.
 - `DUPLICATE_EVENT` — duplicate event ID (HTTP 409)
 
 ---
 
-## 8. Deployment Checklist
+## 7. Deployment Checklist
 
 Before deploying the Member 4 dashboard:
 
@@ -320,31 +347,16 @@ Before deploying the Member 4 dashboard:
 - [ ] `CORS_ORIGINS` in `backend/.env` includes frontend origin
 - [ ] WebSocket endpoint `ws://localhost:8000/ws/events` is accessible
 - [ ] Backend health check `GET /health` returns `ok: true`
-- [ ] Tested: POST /api/events creates event + incident + WebSocket broadcast
+- [ ] Tested: POST /api/events creates event + incident + WebSocket broadcast using **canonical event-v1 shape** (schema_version="event-v1", timestamp as integer epoch milliseconds)
 - [ ] Tested: Incident lifecycle (verify → assign → resolve) broadcasts updates
 - [ ] Tested: GET /api/crowd returns time-series history
 - [ ] Tested: WebSocket reconnect after disconnect
 - [ ] Tested: Duplicate event_id returns HTTP 409, not rebroadcast
+- [ ] Tested: ISO-8601 timestamps are rejected for POST /api.events (backend validates integer epoch ms)
 
 ---
 
-## 9. Frequently Asked Questions
-
-**Q: The WebSocket connection keeps dropping.**
-A: The backend auto-broadcasts events; if the process restarts, connections are lost. Reconnect logic in the JavaScript handles this.
-
-Q: I'm not receiving WebSocket messages.
-A: Ensure the REST `/api/events` endpoint has been called at least once to trigger event processing. The WebSocket mirrors REST-posted events.
-
-Q: The crowd count isn't updating.
-A: Each event with `people_count` creates a new timestamped observation. Multiple events for the same camera append rows, ordered newest-first on `GET /api/crowd`.
-
-Q: I get a CORS error.
-A. Add your frontend origin to `backend/.env`: `CORS_ORIGINS=http://localhost:3000` (or `http://localhost:5173`).
-
----
-
-## 10. Integration Notes for Member 4
+## 8. Integration Notes for Member 4
 
 - **REST is the source of historical/detail data** — use for initial load and individual incident/event lookups
 - **WebSocket is for real-time changes** — after initial REST load, WebSocket keeps the UI synchronized
@@ -352,17 +364,19 @@ A. Add your frontend origin to `backend/.env`: `CORS_ORIGINS=http://localhost:30
 - **Incident state changes are broadcast** — all connected clients receive `incident.updated` when any client calls verify/dismiss/assign/resolve
 - **Crowd metrics are time-series** — each event with `people_count` adds a new row; `GET /api/crowd` returns all rows newest-first
 - **CORS must be configured** — the backend reads allowed origins from `.env`; do not use `allow_origins=["*"]` in production without justification
+- **Canonical event payload**: `POST /api/events` accepts the event-v1 shape. The `timestamp` field **must** be an integer representing Unix epoch milliseconds. ISO-8601 strings will cause a validation error (`INVALID_TIMESTAMP`).
+- **WebSocket `event.created`** broadcasts the same canonical payload: `timestamp` is Unix epoch milliseconds; optional fields `track_ids`, `zone_id`, `persistence_ms`, `people_count` may be present.
 
 ---
 
-## Appendix: Quick Reference Commands
+## 8. Appendix: Quick Reference Commands
 
 ```bash
 # Start backend
 uvicorn app.main:app --reload
 
 # Send a fake intrusion event (for testing)
-python scripts/send_fake_events.py --scenario intrusion
+python integration/simulate_member2.py --scenario intrusion
 
 # Check backend health
 curl http://localhost:8000/health
@@ -381,3 +395,38 @@ curl -X POST http://localhost:8000/api/incidents/{id}/verify \
   -H "Content-Type: application/json" \
   -d '{"user":"operator_01","note":"Confirmed"}'
 ```
+
+---
+
+## 9. FAQ
+
+Q: The WebSocket connection keeps dropping.
+A: The backend auto-broadcasts events; if the process restarts, connections are lost. Reconnect logic in the JavaScript handles this.
+
+Q: I'm not receiving WebSocket messages.
+A: Ensure the REST `/api/events` endpoint has been called at least once to trigger event processing. The WebSocket mirrors REST-posted events.
+
+Q: The crowd count isn't updating.
+A: Each event with `people_count` creates a new timestamped observation. Multiple events for the same camera append rows, ordered newest-first on `GET /api/crowd`.
+
+Q: I get a CORS error.
+A: Add your frontend origin to `backend/.env`: `CORS_ORIGINS=http://localhost:3000` (or `http://localhost:5173`).
+
+Q: Why does the event timestamp look different on the dashboard?
+A: The backend stores timestamps as ISO-8601 datetimes in the database, but the **canonical event payload** uses Unix epoch milliseconds. The dashboard formats the epoch ms for display.
+
+--- 
+
+## 10. Integration Checklist for Member 4
+
+- [ ] Backend running at `http://localhost:8000` (or configured port)
+- [ ] `CORS_ORIGINS` in `backend/.env` includes frontend origin
+- [ ] WebSocket endpoint `ws://localhost:8000/ws/events` is accessible
+- [ ] Backend health check `GET /health` returns `ok: true`
+- [ ] Tested: POST /api/events creates event using canonical event-v1 shape
+- [ ] Tested: Incident lifecycle (verify → assign → resolve) broadcasts updates
+- [ ] Tested: GET /api/crowd returns time-series history
+- [ ] Tested: WebSocket reconnect after disconnect
+- [ ] Tested: Duplicate event_id returns HTTP 409, not rebroadcast
+- [ ] Tested: ISO-8601 timestamps are rejected for POST /api.events (backend validates integer epoch ms)
+- [ ] Tested: WebSocket `event.created` broadcasts canonical payload with epoch-ms timestamp

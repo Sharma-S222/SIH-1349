@@ -15,17 +15,22 @@ def receive_type(ws, expected, maximum=4):
 
 def test_member2_contract_event_to_lifecycle_and_realtime_updates():
     event = {
-        "schema_version": "1.0",
-        "event_id": "EVT_MEMBER2_STYLE",
-        "camera_id": "CAM_04",
-        "timestamp": "2026-08-20T12:00:00+05:30",
+        "schema_version": "event-v1",
+        "event_id": "EVT_E2E_001",
+        "camera_id": "CAM_PLATFORM_01",
+        "timestamp": 1787218200000,
         "event_type": "restricted_zone_intrusion",
         "severity": "HIGH",
-        "confidence": 0.94,
-        "zone_id": "TRACK_ZONE",
-        "people_count": 31,
-        "metadata": {"producer": "member2", "correlation_key": "track-42"},
-        "evidence": {"snapshot_path": "/evidence/frame.jpg", "clip_path": "/evidence/clip.mp4"},
+        "confidence": 0.92,
+        "track_ids": ["17", "22"],
+        "zone_id": "ZONE_PLATFORM_EDGE",
+        "persistence_ms": 2200,
+        "people_count": 1,
+        "metadata": {},
+        "evidence": {
+            "snapshot_path": None,
+            "clip_path": None
+        }
     }
 
     with client.websocket_connect("/ws/events") as ws:
@@ -33,7 +38,7 @@ def test_member2_contract_event_to_lifecycle_and_realtime_updates():
         accepted = client.post("/api/events", json=event)
         assert accepted.status_code == 200
         assert receive_type(ws, "event.created")["data"]["event_id"] == event["event_id"]
-        assert receive_type(ws, "crowd.updated")["data"]["people_count"] == 31
+        assert receive_type(ws, "crowd.updated")["data"]["people_count"] == 1
 
         verify = client.post(f"/api/incidents/{event['event_id']}/verify", json={"user": "operator_01"})
         assert verify.status_code == 200

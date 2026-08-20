@@ -1,10 +1,11 @@
 # SIH1349 Backend API Contract Version 1.0
 
 ## Contract Version
-**1.0** — Frozen for Member 4 integration. Do not change field names or payload structures without incrementing contract version.
+**event-v1** — Canonical shared event contract between Member 2, Member 3, Member 4, and Member 5 integration.
 
-## Base URL
-`http://localhost:8000`
+The repository-level contract is authoritative: `docs/contracts/event-v1.schema.json`.
+
+Backend documentation explains transport/API behavior but does not redefine incompatible event fields.
 
 ---
 
@@ -28,50 +29,55 @@
 
 ## 2. POST /api/events
 
-**Description:** Accept and process an AI-generated event. If the event type is a safety event, an Incident is automatically created with status NEW. If people_count is provided, a CrowdMetric is stored.
+**Description:** Accept and process an AI-generated event validated against the canonical event-v1 schema.
 
-**Request:**
+**Request (canonical event-v1 shape):**
 ```json
 {
-  "schema_version": "1.0",
+  "schema_version": "event-v1",
   "event_id": "EVT_000123",
-  "camera_id": "CAM_04",
-  "timestamp": "2026-08-20T09:00:00+05:30",
+  "camera_id": "CAM_PLATFORM_01",
+  "timestamp": 1787218200000,
   "event_type": "restricted_zone_intrusion",
   "severity": "HIGH",
   "confidence": 0.92,
-  "zone_id": "TRACK_ZONE",
-  "people_count": 63,
-  "metadata": {},
-  "evidence": {
-    "snapshot_path": null,
-    "clip_path": null
-  }
+  "track_ids": ["17"],
+  "zone_id": "ZONE_PLATFORM_EDGE",
+  "persistence_ms": 2200,
+  "people_count": 1,
+  "evidence": {"snapshot_path": null, "clip_path": null},
+  "metadata": {}
 }
 ```
 
-**Field descriptions:**
+**Field details:**
+
 | Field | Required | Description |
 |-------|----------|-------------|
-| `schema_version` | Yes | Schema version, e.g. `"1.0"` |
-| `event_id` | Yes | Unique event identifier, e.g. `"EVT_000123"` |
-| `camera_id` | Yes | Camera identifier, e.g. `"CAM_04"` |
-| `timestamp` | Yes | ISO-8601 formatted timestamp |
-| `event_type` | Yes | Type of event, e.g. `"restricted_zone_intrusion"` |
-| `severity` | Yes | Severity level. Allowed values: `LOW`, `MEDIUM`, `HIGH`, `CRITICAL` |
-| `confidence` | Yes | Confidence score. Must be 0.0–1.0 |
+| `schema_version` | Yes | Must be `"event-v1"` |
+| `event_id` | Yes | Unique event identifier |
+| `camera_id` | Yes | Camera identifier |
+| `timestamp` | Yes | **Integer Unix epoch milliseconds UTC** (e.g. `1787218200000`). **Do not send ISO-8601 strings.** |
+| `event_type` | Yes | Type of event, e.g. `restricted_zone_intrusion` |
+| `severity` | Yes | Severity level. **Uppercase only**: `LOW`, `MEDIUM`, `HIGH`, `CRITICAL` |
+| `confidence` | Yes | Confidence score. **Must be 0.0–1.0** |
+| `track_ids` | Optional | Array of track identifiers associated with the event |
 | `zone_id` | Optional | Zone/Track identifier per event type |
-| `people_count` | Optional | Number of people detected |
-| `metadata` | Optional | Additional structured AI metadata (JSON object) |
+| `persistence_ms` | Optional | Persistence duration in milliseconds. **Integer >= 0** |
+| `people_count` | Optional | Number of people detected. **Integer >= 0** |
 | `evidence` | Optional | Snapshot and clip path references |
-
-**Allowed severity values:** `LOW`, `MEDIUM`, `HIGH`, `CRITICAL` (as defined in the Pydantic AIEvent schema)
+| `metadata` | Optional | Additional structured AI metadata (JSON object) |
 
 **Validation rules:**
-- `confidence` must be 0–1 (enforced by `ge=0, le=1` in schema)
-- `timestamp` must be valid ISO-8601 (enforced by `@field_validator`)
+- `schema_version` must be `"event-v1"` (any other value, e.g. `"1.0"`, is rejected)
+- `timestamp` must be an **integer** representing Unix epoch milliseconds UTC
+- `confidence` must be 0.0–1.0 (enforced by `ge=0, le=1`)
+- `severity` must be one of `LOW`, `MEDIUM`, `HIGH`, `CRITICAL` (uppercase)
+- `track_ids`, if provided, must be an array of strings
+- `zone_id`, if provided, must be a string or null
+- `persistence_ms`, if provided, must be an integer >= 0
+- `people_count`, if provided, must be an integer >= 0
 - `event_id` must be unique (duplicate returns HTTP 409)
-- `camera_id` required (enforced by Pydantic schema)
 
 **Duplicate behavior:**
 - Same `event_id` sent twice → HTTP 409 conflict
@@ -91,19 +97,32 @@
 {
   "ok": false,
   "error": {
-    "code": "INVALID_TIMESTAMP",
-    "message": "timestamp must be ISO-8601 format"
+    "code": "INVALID_SCHEMA_VERSION",
+    "message": "schema_version must be event-v1"
   }
 }
 ```
 
-**Response (duplicate event):**
+**or**
+
 ```json
 {
   "ok": false,
   "error": {
-    "code": "DUPLICATE_EVENT",
-    "message": "event_id 'EVT_000123' already accepted"
+    "code": "INVALID_TIMESTAMP",
+    "message": "timestamp must be integer Unix epoch milliseconds"
+  }
+}
+```
+
+**or**
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "INVALID_CONFIDENCE",
+    "message": "confidence must be 0.0–1.0"
   }
 }
 ```
@@ -122,16 +141,14 @@
 
 **Description:** Return event history with optional filtering.
 
-**Request:** `GET /api/events?camera_id=CAM_04&event_type=restricted_zone_intrusion&severity=HIGH&start_time=2026-08-20T00:00:00+05:30&end_time=2026-08-20T23:59:59+05:30&limit=100`
-
 **Query parameters:**
 | Parameter | Description |
 |-----------|-------------|
 | `camera_id` | Filter by camera ID |
 | `event_type` | Filter by event type |
 | `severity` | Filter by severity level |
-| `start_time` | Filter events from this timestamp (ISO-8601) |
-| `end_time` | Filter events until this timestamp (ISO-8601) |
+| `start_time` | Filter events from this timestamp. **ISO-8601 query parameter** (e.g. `2026-08-20T00:00:00+05:30`). *Documented separately from event payload timestamp.* |
+| `end_time` | Filter events until this timestamp. **ISO-8601 query parameter**. |
 | `limit` | Maximum number of results (default: 100) |
 
 **Representative request:**
@@ -152,11 +169,15 @@ GET /api/events?camera_id=CAM_04&severity=HIGH
       "confidence": 0.92,
       "timestamp": "2026-08-20T08:00:00+05:30",
       "zone_id": "TRACK_ZONE",
-      "people_count": 63
+      "people_count": 63,
+      "track_ids": ["17"],
+      "persistence_ms": 2200
     }
   ]
 }
 ```
+
+**Note:** The `timestamp` in the GET response is the **database internal representation** (ISO-8601 datetime), *separate from* the canonical event payload timestamp (Unix epoch milliseconds). Query filters `start_time`/`end_time` use ISO-8601 strings.
 
 **Error:** N/A (always returns 200, possibly with empty `data` array)
 
@@ -254,7 +275,7 @@ GET /api/events?camera_id=CAM_04&severity=HIGH
 
 ## 7. POST /api/incidents/{id}/assign
 
-**Description:** Transition VERIFIED → ASSIGNED. Assign to a response team.
+**Description:** Transition VERIFIED → ASSIGNED.
 
 **Request:**
 ```json
@@ -311,15 +332,9 @@ GET /api/events?camera_id=CAM_04&severity=HIGH
 ## Lifecycle Diagram
 
 ```
-         ┌──→ DISMISSED
-         │
-NEW ─────┤
-         │
-         └──→ VERIFIED
-                ↓
-             ASSIGNED
-                ↓
-             RESOLVED
+NEW → VERIFIED → ASSIGNED → RESOLVED
+         ↓              ↓
+       DISMISSED
 ```
 
 **Invalid transitions:**
@@ -332,8 +347,6 @@ NEW ─────┤
 ## 9. GET /api/crowd
 
 **Description:** Return crowd metrics history.
-
-**Request:** `GET /api/crowd?camera_id=CAM_04&zone_id=TRACK_ZONE&start_time=2026-08-20T00:00:00+05:30&end_time=2026-08-20T23:59:59+05:30&limit=100`
 
 **Query parameters:**
 | Parameter | Description |
@@ -394,17 +407,21 @@ Sent when a client successfully connects.
 
 Sent when a new AI event is accepted and persisted.
 
-**Payload:**
+**Payload (canonical event-v1 shape):**
 ```json
 {
   "type": "event.created",
   "data": {
     "event_id": "EVT_000123",
-    "camera_id": "CAM_04",
+    "camera_id": "CAM_PLATFORM_01",
     "event_type": "restricted_zone_intrusion",
     "severity": "HIGH",
     "confidence": 0.92,
-    "timestamp": "2026-08-20T09:00:00+05:30"
+    "timestamp": 1787218200000,  // Unix epoch milliseconds
+    "track_ids": ["17"],         // optional
+    "zone_id": "ZONE_PLATFORM_EDGE",   // optional
+    "persistence_ms": 2200,      // optional, integer >= 0
+    "people_count": 1            // optional, integer >= 0
   }
 }
 ```
@@ -437,7 +454,7 @@ Sent when a new crowd metric is stored (event has `people_count`).
     "camera_id": "CAM_04",
     "zone_id": "TRACK_ZONE",
     "people_count": 63,
-    "timestamp": "2026-08-20T09:00:00+05:30"
+    "timestamp": 1787218200000  // Unix epoch milliseconds
   }
 }
 ```
@@ -446,7 +463,7 @@ Sent when a new crowd metric is stored (event has `people_count`).
 | Type | Payload | When broadcast |
 |------|---------|----------------|
 | `connection-established` | `{type, data: {client_id}}` | WebSocket connection accepted |
-| `event.created` | `{type, data: {event_id, camera_id, event_type, severity, confidence, timestamp}}` | New AI event accepted |
+| `event.created` | `{type, data: {event_id, camera_id, event_type, severity, confidence, timestamp, [track_ids], [zone_id], [persistence_ms], [people_count]}}` | New AI event accepted |
 | `incident.updated` | `{type, data: {incident_id, status, assigned_to}}` | Incident state changes |
 | `crowd.updated` | `{type, data: {camera_id, zone_id, people_count, timestamp}}` | Event with `people_count` stored |
 
@@ -475,7 +492,6 @@ All API errors follow this format:
   "error": {
     "code": "ERROR_CODE",
     "message": "Human-readable error description"
-  }
 }
 ```
 
@@ -483,13 +499,15 @@ Successful responses use: `{"ok": true, "data": {...}}`
 
 ---
 
-## Stability Guarantees (Contract Version 1.0)
+## Stability Guarantees (event-v1 Contract)
 
 Following field names **must not** change without incrementing contract version:
-- `event_id`, `camera_id`, `event_type`, `severity`, `confidence`, `timestamp` (POST /api/events)
+- `event_id`, `camera_id`, `event_type`, `severity`, `confidence`, `schema_version`, `timestamp` (POST payload)
 - `incident_id`, `event_id`, `status`, `assigned_to` (incident APIs)
-- `camera_id`, `zone_id`, `people_count`, `timestamp` (GET /api/crowd)
+- `camera_id`, `zone_id`, `people_count`, `timestamp` (GET /api/crowd) — timestamp is ISO-8601 datetime
 - WebSocket message types: `connection-established`, `event.created`, `incident.updated`, `crowd.updated`
 - WebSocket payload field names within each message type
 
 Member 2 and Member 4 can rely on these field names being stable.
+
+**Canonical shared schema is authoritative: `docs/contracts/event-v1.schema.json`**
