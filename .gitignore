@@ -151,6 +151,10 @@ activemq-data/
 .env
 .envrc
 .venv
+weights/
+outputs/
+third_party/
+sample_bus.jpg
 env/
 venv/
 ENV/

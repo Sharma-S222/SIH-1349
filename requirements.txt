@@ -1,0 +1,15 @@
+# RT-DETRv2-S Person Detection - Member 1 Requirements
+# This file lists all dependencies actually imported by the project source code.
+
+# Core dependencies (verified by import analysis):
+numpy>=1.24.0
+torch>=2.0.0
+opencv-python>=4.8.0
+jsonschema>=4.26.0
+
+# Test dependencies:
+pytest>=7.0.0
+
+# Additional dependencies used by the project:
+# - Pillow (PIL) for image handling in detector
+# - yaml for configuration loading
