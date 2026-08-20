@@ -1,0 +1,4 @@
+# Member 5 Video Runtime Dependencies
+numpy
+opencv-python
+PyYAML
