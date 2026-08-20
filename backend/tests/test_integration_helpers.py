@@ -19,7 +19,7 @@ def test_event_id_and_timestamp_helpers_are_contract_safe():
 def test_all_simulator_scenarios_build_contract_v1_events():
     for scenario in SCENARIOS:
         event = build_event(scenario)
-        assert event["schema_version"] == "1.0"
+        assert event["schema_version"] == "event-v1"
         assert event["event_id"].startswith("EVT_")
         assert event["severity"] in {"LOW", "MEDIUM", "HIGH", "CRITICAL"}
         assert 0 <= event["confidence"] <= 1

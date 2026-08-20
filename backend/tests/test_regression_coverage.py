@@ -9,12 +9,13 @@ from app.websocket.manager import manager
 from conftest import client
 
 
-def event_payload(event_id, camera_id="CAM_04", timestamp="2026-08-20T09:00:00+05:30", **overrides):
+def event_payload(event_id, camera_id="CAM_04", timestamp=1787218200000, **overrides):
+    import time
     payload = {
-        "schema_version": "1.0",
+        "schema_version": "event-v1",
         "event_id": event_id,
         "camera_id": camera_id,
-        "timestamp": timestamp,
+        "timestamp": timestamp,  # integer Unix epoch milliseconds UTC
         "event_type": "passenger_flow",
         "severity": "LOW",
         "confidence": 0.85,
@@ -33,13 +34,13 @@ def test_event_history_filters_by_camera():
 
 def test_crowd_history_preserves_observations_filters_and_orders_newest_first():
     assert client.post("/api/events", json=event_payload(
-        "EVT_CROWD_OLD", "CAM_04", "2026-08-20T09:00:00+05:30", people_count=12
+        "EVT_CROWD_OLD", "CAM_04", 1787218200000, people_count=12
     )).status_code == 200
     assert client.post("/api/events", json=event_payload(
-        "EVT_CROWD_NEW", "CAM_04", "2026-08-20T09:05:00+05:30", people_count=18
+        "EVT_CROWD_NEW", "CAM_04", 1787218500000, people_count=18
     )).status_code == 200
     assert client.post("/api/events", json=event_payload(
-        "EVT_CROWD_OTHER", "CAM_09", "2026-08-20T09:10:00+05:30", people_count=30
+        "EVT_CROWD_OTHER", "CAM_09", 1787218800000, people_count=30
     )).status_code == 200
 
     records = client.get("/api/crowd", params={"camera_id": "CAM_04"}).json()["data"]
