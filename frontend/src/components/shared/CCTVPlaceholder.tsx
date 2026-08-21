@@ -13,6 +13,7 @@ interface CCTVPlaceholderProps {
 export function CCTVPlaceholder({ cameraId, status, peopleCount, risk, className = '', compact = false }: CCTVPlaceholderProps) {
   const isOffline = status === 'OFFLINE';
   const isDegraded = status === 'DEGRADED';
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
 
   return (
     <div className={`relative bg-[#060a10] overflow-hidden ${className}`}>
@@ -35,7 +36,10 @@ export function CCTVPlaceholder({ cameraId, status, peopleCount, risk, className
             <span className="text-amber-700/60 font-mono text-[10px] mt-1.5 tracking-widest">SIGNAL DEGRADED</span>
           </>
         ) : (
-          <Video className="text-slate-800" size={compact ? 20 : 28} />
+          <>
+            <img src={`${API_BASE_URL}/api/cameras/${cameraId}/stream`} className="w-full h-full object-cover" alt={`Camera ${cameraId} stream`} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+            <Video className="text-slate-800 absolute -z-10" size={compact ? 20 : 28} />
+          </>
         )}
       </div>
 

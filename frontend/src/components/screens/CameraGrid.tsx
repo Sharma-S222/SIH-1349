@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, X, Users, Clock, Radio, Grid2X2, Grid3X3 } from 'lucide-react';
 import type { Camera, CameraStatus, RiskLevel } from '../../types/ui';
 import { CAMERAS } from '../../data/mockData';
@@ -46,10 +46,46 @@ export function CameraGrid(_props: CameraGridProps) {
   const [riskFilter, setRiskFilter] = useState<RiskLevel | 'ALL'>('ALL');
   const [columns, setColumns] = useState<2 | 3 | 4>(3);
   const [selectedCamera, setSelectedCamera] = useState<Camera | null>(null);
+  const [camerasData, setCamerasData] = useState<Camera[]>(CAMERAS);
 
-  const zones = ['ALL', ...Array.from(new Set(CAMERAS.map(c => c.zone_name)))];
+  useEffect(() => {
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
+    let active = true;
+    const fetchCameras = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/cameras`);
+        const json = await res.json();
+        if (active && json.ok) {
+          const liveData = json.data as any[];
+          setCamerasData(prev => prev.map(cam => {
+            const live = liveData.find((l: any) => l.camera_id === cam.camera_id);
+            if (live) {
+              return {
+                ...cam,
+                status: live.status,
+                people_count: live.people_count,
+                last_update: "Just now",
+                latest_event: live.telemetry.status === "PROCESSING" 
+                  ? `Fps: ${live.telemetry.pipeline_fps} | Tracks: ${live.telemetry.active_tracks}` 
+                  : cam.latest_event,
+              };
+            }
+            return cam;
+          }));
+        }
+      } catch (e) {
+        console.error("Failed to fetch camera telemetry", e);
+      }
+    };
+    
+    fetchCameras();
+    const interval = setInterval(fetchCameras, 2000);
+    return () => { active = false; clearInterval(interval); };
+  }, []);
 
-  const filtered = CAMERAS.filter(cam => {
+  const zones = ['ALL', ...Array.from(new Set(camerasData.map(c => c.zone_name)))];
+
+  const filtered = camerasData.filter(cam => {
     if (search && !cam.name.toLowerCase().includes(search.toLowerCase()) && !cam.camera_id.toLowerCase().includes(search.toLowerCase())) return false;
     if (zoneFilter !== 'ALL' && cam.zone_name !== zoneFilter) return false;
     if (statusFilter !== 'ALL' && cam.status !== statusFilter) return false;

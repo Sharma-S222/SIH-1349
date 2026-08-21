@@ -95,8 +95,10 @@ async def health():
 # Include API routers
 from app.api.events import router as events_router
 from app.api.incidents import router as incidents_router
+from app.api.cameras import router as cameras_router
 app.include_router(events_router, prefix="/api", tags=["events"])
 app.include_router(incidents_router, prefix="/api", tags=["incidents"])
+app.include_router(cameras_router, prefix="/api/cameras", tags=["cameras"])
 
 
 # WebSocket endpoint for real-time event streaming
