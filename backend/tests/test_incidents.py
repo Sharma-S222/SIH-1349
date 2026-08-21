@@ -26,11 +26,12 @@ def test_health():
 
 def test_valid_event():
     """Valid event POST returns 200 with ok=True."""
+    import time
     event = {
-        "schema_version": "1.0",
+        "schema_version": "event-v1",
         "event_id": "EVT_VALID_001",
         "camera_id": "CAM_01",
-        "timestamp": "2026-08-19T21:15:22+05:30",
+        "timestamp": int(time.time() * 1000),
         "event_type": "restricted_zone_intrusion",
         "severity": "HIGH",
         "confidence": 0.92,
@@ -42,12 +43,13 @@ def test_valid_event():
 
 
 def test_valid_event_z_timestamp():
-    """Valid event with Z-suffix timestamp returns 200."""
+    """Valid event with epoch-ms timestamp returns 200."""
+    import time
     event = {
-        "schema_version": "1.0",
+        "schema_version": "event-v1",
         "event_id": "EVT_VALID_Z_001",
         "camera_id": "CAM_01",
-        "timestamp": "2026-08-20T04:00:00Z",
+        "timestamp": int(time.time() * 1000),
         "event_type": "fall_detected",
         "severity": "MEDIUM",
         "confidence": 0.80,
@@ -88,11 +90,12 @@ def test_invalid_confidence():
 
 def test_duplicate_event():
     """Duplicate event_id returns 409 with Contract V1 error format."""
+    import time
     event = {
-        "schema_version": "1.0",
+        "schema_version": "event-v1",
         "event_id": "EVT_DUP_001",
         "camera_id": "CAM_01",
-        "timestamp": "2026-08-19T21:15:22+05:30",
+        "timestamp": int(time.time() * 1000),
         "event_type": "restricted_zone_intrusion",
         "severity": "HIGH",
         "confidence": 0.92,
@@ -109,11 +112,12 @@ def test_duplicate_event():
 
 def test_duplicate_event_no_double_send():
     """Second duplicate event also returns 409."""
+    import time
     event = {
-        "schema_version": "1.0",
+        "schema_version": "event-v1",
         "event_id": "EVT_DUP_BROADCAST_001",
         "camera_id": "CAM_04",
-        "timestamp": "2026-08-19T21:15:22+05:30",
+        "timestamp": int(time.time() * 1000),
         "event_type": "restricted_zone_intrusion",
         "severity": "HIGH",
         "confidence": 0.92,
@@ -133,12 +137,13 @@ def test_incident_creation():
     Uses GET /api/incidents (list) since the contract does not define
     GET /api/incidents/{id}.
     """
+    import time
     event_id = "EVT_INC_001"
     event = {
-        "schema_version": "1.0",
+        "schema_version": "event-v1",
         "event_id": event_id,
         "camera_id": "CAM_01",
-        "timestamp": "2026-08-20T08:00:00+05:30",
+        "timestamp": int(time.time() * 1000),
         "event_type": "restricted_zone_intrusion",
         "severity": "HIGH",
         "confidence": 0.92,
@@ -158,11 +163,12 @@ def test_incident_creation():
 
 def test_verify_incident():
     """Verify incident: NEW -> VERIFIED."""
+    import time
     event = {
-        "schema_version": "1.0",
+        "schema_version": "event-v1",
         "event_id": "EVT_VERIFY_001",
         "camera_id": "CAM_01",
-        "timestamp": "2026-08-20T08:00:00+05:30",
+        "timestamp": int(time.time() * 1000),
         "event_type": "restricted_zone_intrusion",
         "severity": "HIGH",
         "confidence": 0.92,
@@ -179,11 +185,12 @@ def test_verify_incident():
 
 def test_dismiss_incident():
     """Dismiss incident: NEW -> DISMISSED."""
+    import time
     event = {
-        "schema_version": "1.0",
+        "schema_version": "event-v1",
         "event_id": "EVT_DISMISS_001",
         "camera_id": "CAM_01",
-        "timestamp": "2026-08-20T08:00:00+05:30",
+        "timestamp": int(time.time() * 1000),
         "event_type": "restricted_zone_intrusion",
         "severity": "HIGH",
         "confidence": 0.92,
@@ -200,11 +207,12 @@ def test_dismiss_incident():
 
 def test_assign_incident():
     """Assign incident: VERIFIED -> ASSIGNED."""
+    import time
     event = {
-        "schema_version": "1.0",
+        "schema_version": "event-v1",
         "event_id": "EVT_ASSIGN_001",
         "camera_id": "CAM_01",
-        "timestamp": "2026-08-20T08:00:00+05:30",
+        "timestamp": int(time.time() * 1000),
         "event_type": "restricted_zone_intrusion",
         "severity": "HIGH",
         "confidence": 0.92,
@@ -229,11 +237,12 @@ def test_assign_incident():
 
 def test_resolve_incident():
     """Resolve incident: ASSIGNED -> RESOLVED."""
+    import time
     event = {
-        "schema_version": "1.0",
+        "schema_version": "event-v1",
         "event_id": "EVT_RESOLVE_001",
         "camera_id": "CAM_01",
-        "timestamp": "2026-08-20T08:00:00+05:30",
+        "timestamp": int(time.time() * 1000),
         "event_type": "restricted_zone_intrusion",
         "severity": "HIGH",
         "confidence": 0.92,
@@ -264,11 +273,12 @@ def test_illegal_transition():
     
     Contract V1 (API_CONTRACT_V1.md) specifies 409 for invalid transitions.
     """
+    import time
     event = {
-        "schema_version": "1.0",
+        "schema_version": "event-v1",
         "event_id": "EVT_ILLEGAL_001",
         "camera_id": "CAM_01",
-        "timestamp": "2026-08-20T08:00:00+05:30",
+        "timestamp": int(time.time() * 1000),
         "event_type": "restricted_zone_intrusion",
         "severity": "HIGH",
         "confidence": 0.92,
@@ -295,6 +305,7 @@ def test_illegal_transition():
 
 def test_contract_ws_event_created():
     """WS /ws/events sends connection-established then event.created with Contract V1 keys."""
+    import time
     with client.websocket_connect("/ws/events") as ws_a:
         # Receive connection-established message first (per Contract V1)
         connected = ws_a.receive_json()
@@ -304,10 +315,10 @@ def test_contract_ws_event_created():
 
         # POST a new event
         event = {
-            "schema_version": "1.0",
+            "schema_version": "event-v1",
             "event_id": "EVT_CONTRACT_WS_001",
             "camera_id": "CAM_02",
-            "timestamp": "2026-08-20T09:00:00+05:30",
+            "timestamp": int(time.time() * 1000),
             "event_type": "fall_detected",
             "severity": "MEDIUM",
             "confidence": 0.88,
@@ -332,6 +343,7 @@ def test_contract_ws_event_created():
 
 def test_contract_ws_crowd_updated():
     """WS /ws/events sends crowd.updated when event has people_count."""
+    import time
     with client.websocket_connect("/ws/events") as ws_a:
         # Consume connection-established
         connected = ws_a.receive_json()
@@ -339,10 +351,10 @@ def test_contract_ws_crowd_updated():
 
         # POST event with people_count
         event = {
-            "schema_version": "1.0",
+            "schema_version": "event-v1",
             "event_id": "EVT_CONTRACT_CROWDWS_001",
             "camera_id": "CAM_01",
-            "timestamp": "2026-08-20T10:00:00+05:30",
+            "timestamp": int(time.time() * 1000),
             "event_type": "restricted_zone_intrusion",
             "severity": "HIGH",
             "confidence": 0.92,
@@ -375,6 +387,7 @@ def test_contract_ws_crowd_updated():
 
 def test_contract_ws_incident_updated():
     """WS /ws/events sends incident.updated through lifecycle."""
+    import time
     with client.websocket_connect("/ws/events") as ws_a:
         # Receive connection-established message first
         connected = ws_a.receive_json()
@@ -383,10 +396,10 @@ def test_contract_ws_incident_updated():
 
         # Create safety event
         event = {
-            "schema_version": "1.0",
+            "schema_version": "event-v1",
             "event_id": "EVT_CONTRACT_INCWS_001",
             "camera_id": "CAM_01",
-            "timestamp": "2026-08-20T08:00:00+05:30",
+            "timestamp": int(time.time() * 1000),
             "event_type": "restricted_zone_intrusion",
             "severity": "HIGH",
             "confidence": 0.92,
@@ -459,12 +472,13 @@ def test_contract_ws_incident_updated():
 
 def test_contract_error_format():
     """Application-level errors retain {ok: false, error: {code, message}} format."""
+    import time
     # Trigger duplicate event (HTTP 409)
     event = {
-        "schema_version": "1.0",
+        "schema_version": "event-v1",
         "event_id": "EVT_CONTRACT_ERROR_001",
         "camera_id": "CAM_01",
-        "timestamp": "2026-08-20T08:00:00+05:30",
+        "timestamp": int(time.time() * 1000),
         "event_type": "restricted_zone_intrusion",
         "severity": "HIGH",
         "confidence": 0.92,
