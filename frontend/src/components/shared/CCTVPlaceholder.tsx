@@ -79,7 +79,7 @@ export function CCTVPlaceholder({ cameraId, status, sourceType = 'VIDEO', people
       {status === 'ONLINE' && (
         <div className="absolute top-2 left-2 flex items-center gap-1 bg-green-700/80 px-1.5 py-0.5 rounded text-green-100 text-[10px] font-mono tracking-wide z-20">
           <span className="w-1.5 h-1.5 rounded-full bg-green-300 animate-pulse" />
-          LIVE
+          {sourceType === 'VIDEO' ? 'PROCESSING' : 'LIVE'}
         </div>
       )}
       {isDegraded && (

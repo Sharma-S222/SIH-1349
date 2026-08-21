@@ -10,10 +10,10 @@ export const ZONES: Zone[] = [
 ];
 
 export const CAMERAS: Camera[] = [
-  { camera_id: 'CAM_PLATFORM_01', name: 'Platform 1', zone_id: 'PLT1', zone_name: 'Platform 1', status: 'OFFLINE', people_count: 0, risk: 'LOW', last_update: '-', latest_event: 'AWAITING VIDEO', source_type: 'VIDEO' },
-  { camera_id: 'CAM_PLATFORM_02', name: 'Platform 2', zone_id: 'PLT2', zone_name: 'Platform 2', status: 'OFFLINE', people_count: 0, risk: 'LOW', last_update: '-', latest_event: 'AWAITING VIDEO', source_type: 'VIDEO' },
-  { camera_id: 'CAM_PLATFORM_03', name: 'Platform 3 (Live)', zone_id: 'PLT3', zone_name: 'Platform 3', status: 'OFFLINE', people_count: 0, risk: 'LOW', last_update: '-', latest_event: 'NOT CONNECTED', source_type: 'LIVE_CAMERA' },
-  { camera_id: 'CAM_PLATFORM_04', name: 'Platform 4', zone_id: 'PLT4', zone_name: 'Platform 4', status: 'OFFLINE', people_count: 0, risk: 'LOW', last_update: '-', latest_event: 'NOT CONNECTED', source_type: 'DISCONNECTED' },
+  { camera_id: 'CAM_PLATFORM_01', name: 'CAM_PLATFORM_01', zone_id: 'PLT1', zone_name: 'Platform 1', status: 'OFFLINE', people_count: 0, risk: 'LOW', last_update: '-', latest_event: 'AWAITING VIDEO', source_type: 'VIDEO' },
+  { camera_id: 'CAM_PLATFORM_02', name: 'CAM_PLATFORM_02', zone_id: 'PLT2', zone_name: 'Platform 2', status: 'OFFLINE', people_count: 0, risk: 'LOW', last_update: '-', latest_event: 'AWAITING VIDEO', source_type: 'VIDEO' },
+  { camera_id: 'CAM_PLATFORM_03', name: 'CAM_PLATFORM_03', zone_id: 'PLT3', zone_name: 'Platform 3', status: 'OFFLINE', people_count: 0, risk: 'LOW', last_update: '-', latest_event: 'NOT CONNECTED', source_type: 'LIVE_CAMERA' },
+  { camera_id: 'CAM_PLATFORM_04', name: 'CAM_PLATFORM_04', zone_id: 'PLT4', zone_name: 'Platform 4', status: 'OFFLINE', people_count: 0, risk: 'LOW', last_update: '-', latest_event: 'NOT CONNECTED', source_type: 'DISCONNECTED' },
 ];
 
 export const INITIAL_EVENTS: RailwayEvent[] = [

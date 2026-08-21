@@ -31,12 +31,14 @@ class VideoPipeline:
         zone_config_path: Optional[str] = None,
         display: bool = False,
         output_path: Optional[str] = None,
+        loop: bool = False,
     ):
         self.video_path = video_path
         self.camera_id = camera_id
         self.backend_url = backend_url
         self.display = display
         self.output_path = output_path
+        self.loop = loop
         
         if device_index is not None:
             self.source = WebcamVideoSource(camera_id, device_index=device_index)
@@ -107,6 +109,14 @@ class VideoPipeline:
             while True:
                 frame = self.source.read()
                 if frame is None:
+                    if self.loop and getattr(self.source, '_cap', None):
+                        logger.info("Looping video source...")
+                        import cv2
+                        self.source._cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                        self.state_mgr.states.clear()
+                        from integration.tracking.adapter import ByteTrackAdapter
+                        self.tracker = ByteTrackAdapter(iou_threshold=0.1, min_hits=2)
+                        continue
                     break
                     
                 inf_start = time.time()

@@ -210,7 +210,9 @@ export function CameraGrid(_props: CameraGridProps) {
                     <div className="flex items-center justify-between mt-1.5">
                       <div className="flex items-center gap-1">
                         <span className={`w-1.5 h-1.5 rounded-full ${statusDot[cam.status]}`} />
-                        <span className={`text-[10px] font-mono ${statusText[cam.status]}`}>{cam.status}</span>
+                        <span className={`text-[10px] font-mono ${statusText[cam.status]}`}>
+                          {cam.status === 'ONLINE' ? (cam.source_type === 'VIDEO' ? 'PROCESSING' : 'LIVE') : cam.status}
+                        </span>
                       </div>
                       <span className="text-[10px] font-mono text-slate-600">{cam.last_update}</span>
                     </div>
@@ -251,7 +253,9 @@ export function CameraGrid(_props: CameraGridProps) {
                 <Stat label="Status">
                   <div className="flex items-center gap-1">
                     <span className={`w-1.5 h-1.5 rounded-full ${statusDot[selectedCamera.status]}`} />
-                    <span className={`text-[12px] font-mono ${statusText[selectedCamera.status]}`}>{selectedCamera.status}</span>
+                    <span className={`text-[12px] font-mono ${statusText[selectedCamera.status]}`}>
+                      {selectedCamera.status === 'ONLINE' ? (selectedCamera.source_type === 'VIDEO' ? 'PROCESSING' : 'LIVE') : selectedCamera.status}
+                    </span>
                   </div>
                 </Stat>
                 <Stat label="Risk Level">
