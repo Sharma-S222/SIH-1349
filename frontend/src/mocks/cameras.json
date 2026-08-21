@@ -1,0 +1,34 @@
+[
+  {
+    "camera_id": "CAM_01",
+    "name": "Platform 1",
+    "location": "Platform 1",
+    "status": "ONLINE",
+    "people_count": 24,
+    "risk": "LOW"
+  },
+  {
+    "camera_id": "CAM_02",
+    "name": "Main Concourse",
+    "location": "Concourse",
+    "status": "ONLINE",
+    "people_count": 38,
+    "risk": "MODERATE"
+  },
+  {
+    "camera_id": "CAM_04",
+    "name": "Platform 2",
+    "location": "Platform 2",
+    "status": "ONLINE",
+    "people_count": 17,
+    "risk": "HIGH"
+  },
+  {
+    "camera_id": "CAM_07",
+    "name": "Stair A",
+    "location": "Stair A",
+    "status": "OFFLINE",
+    "people_count": 0,
+    "risk": "UNKNOWN"
+  }
+]

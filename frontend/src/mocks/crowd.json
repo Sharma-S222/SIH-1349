@@ -1,0 +1,23 @@
+{
+  "station": "Demo Junction",
+  "current_count": 79,
+  "risk": "HIGH",
+  "trend": "INCREASING",
+  "zones": [
+    {
+      "zone_id": "Platform 1",
+      "people_count": 24,
+      "risk": "LOW"
+    },
+    {
+      "zone_id": "Concourse",
+      "people_count": 38,
+      "risk": "MEDIUM"
+    },
+    {
+      "zone_id": "Stair A",
+      "people_count": 17,
+      "risk": "HIGH"
+    }
+  ]
+}

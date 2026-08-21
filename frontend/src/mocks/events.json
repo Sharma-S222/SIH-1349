@@ -1,0 +1,29 @@
+[
+  {
+    "event_id": "EVT_001",
+    "camera_id": "CAM_04",
+    "event_type": "restricted_zone_intrusion",
+    "severity": "HIGH",
+    "confidence": 0.92,
+    "zone_id": "Platform 1",
+    "people_count": 4
+  },
+  {
+    "event_id": "EVT_002",
+    "camera_id": "CAM_02",
+    "event_type": "crowd_overload",
+    "severity": "MEDIUM",
+    "confidence": 0.87,
+    "zone_id": "Concourse",
+    "people_count": 38
+  },
+  {
+    "event_id": "EVT_003",
+    "camera_id": "CAM_07",
+    "event_type": "fall_detected",
+    "severity": "CRITICAL",
+    "confidence": 0.91,
+    "zone_id": "Stair A",
+    "people_count": 12
+  }
+]
