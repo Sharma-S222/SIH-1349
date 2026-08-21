@@ -42,7 +42,6 @@ def test_project_structure():
         "ai/detection/config.py",
         "ai/detection/detector.py",
         "weights/rtdetrv2_s.pth",
-        "sample_bus.jpg",
         "tests/conftest.py",
         "tests/schemas/detection_result_v1.json",
         "tests/test_bounding_boxes.py",
@@ -199,9 +198,9 @@ def test_rediscovery_of_weights():
 
 
 def test_sample_image_processing():
-    """Test that the sample bus image can be processed.
+    """Test that a synthetic test image can be processed.
 
-    Verifies the sample_bus.jpg can be read and processed
+    Verifies a synthetic image can be created and processed
     by the detector pipeline.
     """
     import cv2
@@ -209,20 +208,27 @@ def test_sample_image_processing():
 
     detector = PersonObjectDetector(DetectorConfig())
 
-    # Read sample image
-    image_path = Path("sample_bus.jpg")
-    assert image_path.exists(), "sample_bus.jpg should exist"
+    # Create synthetic test image (white rectangle on black background)
+    image_path = Path("synthetic_test.jpg")
+    synthetic_frame = np.zeros((720, 1280, 3), dtype=np.uint8)
+    cv2.rectangle(synthetic_frame, (500, 200), (780, 600), (255, 255, 255), -1)
+    cv2.imwrite(str(image_path), synthetic_frame)
 
-    frame = cv2.imread(str(image_path))
-    assert frame is not None, "sample_bus.jpg should be readable"
+    try:
+        frame = cv2.imread(str(image_path))
+        assert frame is not None, "synthetic test image should be readable"
 
-    # Run detection
-    result = detector.detect_frame(frame, camera_id="CAM_01", frame_index=0)
+        # Run detection
+        result = detector.detect_frame(frame, camera_id="CAM_01", frame_index=0)
 
-    # Verify result is schema-valid
-    import jsonschema
-    jsonschema.validate(result, DETECTION_RESULT_V1_SCHEMA)
+        # Verify result is schema-valid
+        import jsonschema
+        jsonschema.validate(result, DETECTION_RESULT_V1_SCHEMA)
 
-    # Verify people_count is a non-negative integer
-    assert isinstance(result["people_count"], int)
-    assert result["people_count"] >= 0
+        # Verify people_count is a non-negative integer
+        assert isinstance(result["people_count"], int)
+        assert result["people_count"] >= 0
+    finally:
+        # Cleanup
+        if image_path.exists():
+            image_path.unlink()

@@ -76,7 +76,7 @@ def test_mocked_output_assembly_path():
         assert key in result, f"Missing key '{key}' in DetectionResult"
 
     # verify schema_version
-    assert result["schema_version"] == "1.0", "schema_version should be '1.0'"
+    assert result["schema_version"] == "detection-v1", "schema_version should be 'detection-v1'"
 
     # verify camera_id propagation
     assert result["camera_id"] == "CAM_01", "camera_id should be CAM_01"
@@ -138,7 +138,7 @@ def test_empty_detections_path():
 
     # verify required keys
     assert isinstance(result, dict)
-    assert result["schema_version"] == "1.0"
+    assert result["schema_version"] == "detection-v1"
     assert result["camera_id"] == "CAM_TEST"
     assert result["frame_width"] == 640
     assert result["frame_height"] == 480
@@ -170,7 +170,7 @@ def test_single_person_detection_path():
 
     # verify required keys
     assert isinstance(result, dict)
-    assert result["schema_version"] == "1.0"
+    assert result["schema_version"] == "detection-v1"
     assert result["camera_id"] == "CAM_01"
     assert result["frame_width"] == 640
     assert result["frame_height"] == 480
@@ -232,7 +232,7 @@ def test_detection_result_v1_schema_strictness():
     """
     # valid minimal result with empty detections
     valid_minimal = {
-        "schema_version": "1.0",
+        "schema_version": "detection-v1",
         "camera_id": "CAM_TEST",
         "frame_index": 0,
         "timestamp_ms": 0,
@@ -247,7 +247,7 @@ def test_detection_result_v1_schema_strictness():
 
     # valid result with detections (using the fixtures structure)
     valid_with_detections = {
-        "schema_version": "1.0",
+        "schema_version": "detection-v1",
         "camera_id": "CAM_01",
         "frame_index": 5,
         "timestamp_ms": 1234,
@@ -256,14 +256,14 @@ def test_detection_result_v1_schema_strictness():
         "people_count": 2,
         "detections": [
             {
-                "detection_id": 1,
+                "detection_id": "det_1",
                 "class_id": 0,
                 "class_name": "person",
                 "confidence": 0.95,
                 "bbox_xyxy": [100, 200, 400, 800],
             },
             {
-                "detection_id": 2,
+                "detection_id": "det_2",
                 "class_id": 24,
                 "class_name": "backpack",
                 "confidence": 0.72,
@@ -296,7 +296,7 @@ def test_detection_result_v1_schema_strictness():
 
     # invalid: negative people count
     invalid_people = {
-        "schema_version": "1.0",
+        "schema_version": "detection-v1",
         "camera_id": "CAM_01",
         "frame_index": 0,
         "timestamp_ms": 0,
@@ -315,7 +315,7 @@ def test_detection_result_v1_schema_strictness():
 
     # invalid: negative inference ms
     invalid_inference = {
-        "schema_version": "1.0",
+        "schema_version": "detection-v1",
         "camera_id": "CAM_01",
         "frame_index": 0,
         "timestamp_ms": 0,
@@ -334,7 +334,7 @@ def test_detection_result_v1_schema_strictness():
 
     # invalid: detection missing required field
     invalid_detection = {
-        "schema_version": "1.0",
+        "schema_version": "detection-v1",
         "camera_id": "CAM_01",
         "frame_index": 0,
         "timestamp_ms": 0,
@@ -359,7 +359,7 @@ def test_detection_result_v1_schema_strictness():
 
     # invalid: confidence above 1.0
     invalid_confidence = {
-        "schema_version": "1.0",
+        "schema_version": "detection-v1",
         "camera_id": "CAM_01",
         "frame_index": 0,
         "timestamp_ms": 0,

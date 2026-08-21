@@ -53,6 +53,10 @@ class PersonObjectDetector:
         model_root = str(self.config.model_root)
         if model_root not in sys.path:
             sys.path.insert(0, model_root)
+        # RT-DETR repo has a nested rtdetrv2_pytorch/ subdirectory
+        nested = self.config.model_root / "rtdetrv2_pytorch"
+        if nested.is_dir() and str(nested) not in sys.path:
+            sys.path.insert(0, str(nested))
         from src.core import YAMLConfig  # Imported only after the vendor source is available.
 
         cfg = YAMLConfig(str(self.config.model_config_path), resume=str(self.config.weights_path))
@@ -105,7 +109,7 @@ class PersonObjectDetector:
             y1, y2 = max(0, min(y1, height)), max(0, min(y2, height))
             detections.append(
                 {
-                    "detection_id": len(detections) + 1,
+                    "detection_id": f"det_{len(detections) + 1}",
                     "class_id": class_id,
                     "class_name": class_name,
                     "confidence": round(confidence, 4),
@@ -114,7 +118,7 @@ class PersonObjectDetector:
             )
 
         return {
-            "schema_version": "1.0",
+            "schema_version": "detection-v1",
             "camera_id": camera_id,
             "frame_index": frame_index,
             "timestamp_ms": timestamp_ms if timestamp_ms is not None else 0,

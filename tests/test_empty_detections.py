@@ -26,7 +26,7 @@ class TestEmptyDetections:
         assert empty_detections_result["people_count"] == 0
 
     def test_empty_schema_version(self, empty_detections_result: dict[str, Any]) -> None:
-        assert empty_detections_result["schema_version"] == "1.0"
+        assert empty_detections_result["schema_version"] == "detection-v1"
 
     def test_empty_frame_dimensions(
         self, empty_detections_result: dict[str, Any]

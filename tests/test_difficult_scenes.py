@@ -51,7 +51,7 @@ def test_dense_crowd_detection():
 
     # Verify basic result structure
     assert isinstance(result, dict)
-    assert result["schema_version"] == "1.0"
+    assert result["schema_version"] == "detection-v1"
     assert result["camera_id"] == "CAM_01"
     assert result["frame_width"] == 640
     assert result["frame_height"] == 480
@@ -113,7 +113,7 @@ def test_low_light_frame():
 
     # Verify result structure is maintained
     assert isinstance(result, dict)
-    assert result["schema_version"] == "1.0"
+    assert result["schema_version"] == "detection-v1"
     assert result["people_count"] >= 0
     assert result["inference_ms"] >= 0
 
@@ -141,7 +141,7 @@ def test_motion_simulation():
 
     # Verify result structure
     assert isinstance(result, dict)
-    assert result["schema_version"] == "1.0"
+    assert result["schema_version"] == "detection-v1"
     assert result["people_count"] >= 0
     assert result["inference_ms"] >= 0
 

@@ -24,7 +24,7 @@ def detection_result_v1_schema() -> dict[str, Any]:
 def empty_detections_result() -> dict[str, Any]:
     """A valid DetectionResult with zero detections."""
     return {
-        "schema_version": "1.0",
+        "schema_version": "detection-v1",
         "camera_id": "CAM_TEST",
         "frame_index": 0,
         "timestamp_ms": 0,
@@ -41,7 +41,7 @@ def empty_detections_result() -> dict[str, Any]:
 def single_person_result() -> dict[str, Any]:
     """A valid DetectionResult with one person detection."""
     return {
-        "schema_version": "1.0",
+        "schema_version": "detection-v1",
         "camera_id": "CAM_TEST",
         "frame_index": 0,
         "timestamp_ms": 0,
@@ -50,7 +50,7 @@ def single_person_result() -> dict[str, Any]:
         "people_count": 1,
         "detections": [
             {
-                "detection_id": 1,
+                "detection_id": "det_1",
                 "class_id": 0,
                 "class_name": "person",
                 "confidence": 0.92,
@@ -66,7 +66,7 @@ def single_person_result() -> dict[str, Any]:
 def multi_detection_result() -> dict[str, Any]:
     """A valid DetectionResult with mixed classes (persons + objects)."""
     return {
-        "schema_version": "1.0",
+        "schema_version": "detection-v1",
         "camera_id": "CAM_01",
         "frame_index": 5,
         "timestamp_ms": 1234,
@@ -75,21 +75,21 @@ def multi_detection_result() -> dict[str, Any]:
         "people_count": 2,
         "detections": [
             {
-                "detection_id": 1,
+                "detection_id": "det_1",
                 "class_id": 0,
                 "class_name": "person",
                 "confidence": 0.95,
                 "bbox_xyxy": [100, 200, 400, 800],
             },
             {
-                "detection_id": 2,
+                "detection_id": "det_2",
                 "class_id": 0,
                 "class_name": "person",
                 "confidence": 0.88,
                 "bbox_xyxy": [500, 250, 750, 900],
             },
             {
-                "detection_id": 3,
+                "detection_id": "det_3",
                 "class_id": 24,
                 "class_name": "backpack",
                 "confidence": 0.72,
