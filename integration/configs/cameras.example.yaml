@@ -1,0 +1,21 @@
+# SIH1349 Camera Configuration Example
+# Member 5 — Video Runtime
+
+cameras:
+  - camera_id: CAM_PLATFORM_01
+    enabled: true
+    source_type: file
+    source_uri: ""
+    analysis_every_n_frames: 3
+    queue_size: 3
+
+  - camera_id: CAM_ENTRY_01
+    enabled: false
+    source_type: rtsp
+    source_uri: ""
+    analysis_every_n_frames: 3
+    queue_size: 3
+    reconnect_enabled: true
+    reconnect_initial_delay_ms: 1000
+    reconnect_max_delay_ms: 30000
+    reconnect_max_attempts: 0
