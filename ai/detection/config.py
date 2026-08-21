@@ -24,4 +24,9 @@ class DetectorConfig:
 
     @property
     def model_config_path(self) -> Path:
+        # RT-DETR repo contains a nested rtdetrv2_pytorch/ subdirectory
+        # with the actual PyTorch source and configs.
+        nested = self.model_root / "rtdetrv2_pytorch"
+        if nested.is_dir():
+            return nested / "configs" / "rtdetrv2" / "rtdetrv2_r18vd_120e_coco.yml"
         return self.model_root / "configs" / "rtdetrv2" / "rtdetrv2_r18vd_120e_coco.yml"

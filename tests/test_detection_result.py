@@ -33,7 +33,7 @@ class TestDetectionResultSchema:
         validate(instance=multi_detection_result, schema=detection_result_v1_schema)
 
     def test_missing_required_field(self, detection_result_v1_schema: dict) -> None:
-        bad = {"schema_version": "1.0"}
+        bad = {"schema_version": "detection-v1"}
         with pytest.raises(Exception):
             validate(instance=bad, schema=detection_result_v1_schema)
 
@@ -55,7 +55,7 @@ class TestDetectionResultSchema:
 
     def test_negative_people_count(self, detection_result_v1_schema: dict) -> None:
         bad = {
-            "schema_version": "1.0",
+            "schema_version": "detection-v1",
             "camera_id": "CAM_01",
             "frame_index": 0,
             "timestamp_ms": 0,
@@ -71,7 +71,7 @@ class TestDetectionResultSchema:
 
     def test_negative_inference_ms(self, detection_result_v1_schema: dict) -> None:
         bad = {
-            "schema_version": "1.0",
+            "schema_version": "detection-v1",
             "camera_id": "CAM_01",
             "frame_index": 0,
             "timestamp_ms": 0,

@@ -94,7 +94,7 @@ def test_real_model_integration():
         assert key in result, f"Missing key '{key}' in DetectionResult"
 
     # verify schema_version
-    assert result["schema_version"] == "1.0", "schema_version should be '1.0'"
+    assert result["schema_version"] == "detection-v1", "schema_version should be 'detection-v1'"
 
     # verify camera_id propagation
     assert result["camera_id"] == "CAM_01", "camera_id should be CAM_01"
