@@ -1,0 +1,14 @@
+{
+  "zones": [
+    {
+      "zone_id": "TRACK_RESTRICTED",
+      "name": "Platform Edge",
+      "polygon": [
+        [0.0, 0.0],
+        [960.0, 0.0],
+        [960.0, 1080.0],
+        [0.0, 1080.0]
+      ]
+    }
+  ]
+}
