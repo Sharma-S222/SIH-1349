@@ -4,9 +4,12 @@ from typing import Any
 import numpy as np
 import supervision as sv
 
-from trackers import ByteTrackTracker
+try:
+    from trackers import ByteTrackTracker
+except ImportError:
+    ByteTrackTracker = None  # type: ignore[assignment, misc]
 
-from adapter import Detection
+from tracking.adapter import Detection
 
 
 @dataclass
@@ -62,6 +65,13 @@ class TrackerWrapper:
 
         ByteTrack owns track_id generation.
         """
+
+        if ByteTrackTracker is None:
+            raise ImportError(
+                "ByteTrackTracker not available. "
+                "Install the 'trackers' package or "
+                "run from the tracking/ directory."
+            )
 
         self.tracker = ByteTrackTracker(
             track_activation_threshold=track_activation_threshold,

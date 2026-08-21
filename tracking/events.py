@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from typing import Any
 
-from state import TrackState
-from movement import MovementState
-from zones import ZoneTransition
+from tracking.state import TrackState
+from tracking.movement import MovementState
+from tracking.zones import ZoneTransition
 
 
 @dataclass
@@ -48,6 +48,9 @@ class EventEngine:
 
     This class does not perform detection or tracking.
     It only interprets already-refined data.
+
+    All internal state is keyed by (camera_id, track_id, zone_id)
+    to prevent cross-camera event leakage.
     """
 
     def __init__(
@@ -66,20 +69,20 @@ class EventEngine:
         # Tracks which objects have already generated
         # a zone-entry event for a particular zone.
         self.zone_entry_events: set[
-            tuple[int, str]
+            tuple[str | None, int, str]
         ] = set()
 
         # Number of consecutive frames an object has
         # remained inside a restricted zone.
         self.restricted_zone_frames: dict[
-            tuple[int, str],
+            tuple[str | None, int, str],
             int,
         ] = {}
 
         # Prevent repeated intrusion events while the
         # same track remains continuously inside the zone.
         self.active_intrusions: set[
-            tuple[int, str]
+            tuple[str | None, int, str]
         ] = set()
 
     def process(
@@ -89,6 +92,7 @@ class EventEngine:
         transition: ZoneTransition,
         frame_index: int,
         timestamp_ms: int,
+        camera_id: str | None = None,
     ) -> list[SafetyEvent]:
 
         events: list[SafetyEvent] = []
@@ -106,6 +110,7 @@ class EventEngine:
             if current_zone is not None:
 
                 event_key = (
+                    camera_id,
                     track_id,
                     current_zone,
                 )
@@ -145,6 +150,7 @@ class EventEngine:
             if previous_zone is not None:
 
                 event_key = (
+                    camera_id,
                     track_id,
                     previous_zone,
                 )
@@ -188,6 +194,7 @@ class EventEngine:
         if current_zone == "TRACK_RESTRICTED":
 
             event_key = (
+                camera_id,
                 track_id,
                 current_zone,
             )
@@ -244,7 +251,7 @@ class EventEngine:
             for key in list(
                 self.restricted_zone_frames
             ):
-                if key[0] == track_id:
+                if key[1] == track_id and key[0] == camera_id:
                     self.restricted_zone_frames.pop(
                         key,
                         None,
@@ -253,7 +260,7 @@ class EventEngine:
             for key in list(
                 self.active_intrusions
             ):
-                if key[0] == track_id:
+                if key[1] == track_id and key[0] == camera_id:
                     self.active_intrusions.discard(
                         key
                     )
@@ -263,6 +270,7 @@ class EventEngine:
     def reset_track(
         self,
         track_id: int,
+        camera_id: str | None = None,
     ) -> None:
         """
         Remove all event state associated with a track.
@@ -271,20 +279,20 @@ class EventEngine:
         self.zone_entry_events = {
             key
             for key in self.zone_entry_events
-            if key[0] != track_id
+            if key[1] != track_id or key[0] != camera_id
         }
 
         self.restricted_zone_frames = {
             key: value
             for key, value
             in self.restricted_zone_frames.items()
-            if key[0] != track_id
+            if key[1] != track_id or key[0] != camera_id
         }
 
         self.active_intrusions = {
             key
             for key in self.active_intrusions
-            if key[0] != track_id
+            if key[1] != track_id or key[0] != camera_id
         }
 
     def reset(self) -> None:

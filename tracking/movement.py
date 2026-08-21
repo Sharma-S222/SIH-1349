@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from math import atan2, degrees, sqrt
 
-from state import TrackState
+from tracking.state import TrackState
 
 
 @dataclass
@@ -105,7 +105,7 @@ class MovementAnalyzer:
         # This is different from displacement.
         #
         # Displacement:
-        #     start → current
+        #     start â†’ current
         #
         # Total distance:
         #     sum of every movement segment

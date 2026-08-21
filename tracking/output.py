@@ -1,8 +1,9 @@
 import json
+import uuid
 from pathlib import Path
 from typing import Any
 
-from events import SafetyEvent
+from tracking.events import SafetyEvent
 
 
 class EventOutput:
@@ -11,7 +12,7 @@ class EventOutput:
     representation used by downstream systems and storage.
     """
 
-    SCHEMA_VERSION = "1.1"
+    SCHEMA_VERSION = "event-v1"
 
     def __init__(
         self,
@@ -29,11 +30,16 @@ class EventOutput:
         event: SafetyEvent,
         camera_id: str | None = None,
         event_id: str | None = None,
+        epoch_ms: int | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """
         Convert one SafetyEvent into a JSON-compatible
-        canonical event record.
+        canonical event record compliant with event-v1.
+
+        epoch_ms:
+            Current epoch time in milliseconds.
+            If None, generated automatically.
         """
 
         if not isinstance(event, SafetyEvent):
@@ -64,14 +70,22 @@ class EventOutput:
         if metadata is None:
             metadata = {}
 
+        if epoch_ms is None:
+            import time
+            epoch_ms = int(time.time() * 1000)
+
+        # Store the source (frame) timestamp in metadata
+        # so downstream systems can correlate with
+        # detection-v1 frames.
+        metadata["source_timestamp_ms"] = int(
+            event.timestamp_ms
+        )
+
         if event_id is None:
-            event_id = self._generate_event_id(
-                event=event,
-                camera_id=camera_id,
-            )
+            event_id = str(uuid.uuid4())
 
         return {
-            "schema_version": self.SCHEMA_VERSION,
+            "schema_version": "event-v1",
 
             "event_id": event_id,
 
@@ -81,8 +95,8 @@ class EventOutput:
                 event.frame_index
             ),
 
-            "timestamp_ms": int(
-                event.timestamp_ms
+            "timestamp": int(
+                epoch_ms
             ),
 
             "event_type": str(
@@ -99,13 +113,13 @@ class EventOutput:
             ),
 
             "track_ids": [
-                int(event.track_id)
+                str(event.track_id)
             ],
 
             "zone_id": event.zone_id,
 
-            "persistence_frames": int(
-                event.persistence_frames
+            "persistence_ms": int(
+                event.persistence_frames * (1000 // 30)  # approximate ms from frames @ 30fps
             ),
 
             "movement": self._clean_value(
@@ -182,31 +196,6 @@ class EventOutput:
             )
 
         return output_path
-
-    @staticmethod
-    def _generate_event_id(
-        event: SafetyEvent,
-        camera_id: str | None,
-    ) -> str:
-        """
-        Generate a deterministic event identifier.
-
-        CAM_NONE is used when no camera ID is available.
-        """
-
-        camera_part = (
-            camera_id
-            if camera_id is not None
-            else "CAM_NONE"
-        )
-
-        return (
-            f"EVT_"
-            f"{camera_part}_"
-            f"{event.frame_index}_"
-            f"{event.track_id}_"
-            f"{event.event_type}"
-        )
 
     @staticmethod
     def _clean_value(

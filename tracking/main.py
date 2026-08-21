@@ -1,14 +1,15 @@
 import json
+import time
 from pathlib import Path
 from typing import Any
 
-from adapter import adapt_detections
-from tracker import TrackerWrapper
-from state import TrackStateManager
-from movement import MovementAnalyzer
-from zones import Zone, ZoneEngine
-from events import EventEngine
-from ouput import EventOutput
+from tracking.adapter import adapt_detections
+from tracking.tracker import TrackerWrapper
+from tracking.state import TrackStateManager
+from tracking.movement import MovementAnalyzer
+from tracking.zones import Zone, ZoneEngine
+from tracking.events import EventEngine
+from tracking.output import EventOutput
 
 
 # ============================================================
@@ -19,8 +20,8 @@ INPUT_DIR = Path("outputs/test_input")
 OUTPUT_DIR = "outputs/events"
 
 # Single-camera MVP.
-# Keep None until a real camera identity is required.
-CAMERA_ID = None
+# Replace with actual camera identity when available.
+CAMERA_ID = "CAM_0"
 
 
 # ============================================================
@@ -158,7 +159,7 @@ def main():
             )
 
             # =================================================
-            # MEMBER 1 → ADAPTER
+            # MEMBER 1 â†’ ADAPTER
             # =================================================
 
             detections = adapt_detections(
@@ -166,7 +167,7 @@ def main():
             )
 
             # =================================================
-            # ADAPTER → TRACKER
+            # ADAPTER â†’ TRACKER
             # =================================================
 
             tracks = tracker.update(
@@ -174,12 +175,13 @@ def main():
             )
 
             # =================================================
-            # TRACKER → STATE
+            # TRACKER â†’ STATE
             # =================================================
 
             states = state_manager.update(
                 tracks,
                 frame_index=frame_index,
+                camera_id=CAMERA_ID,
             )
 
             # =================================================
@@ -189,7 +191,7 @@ def main():
             for state in states:
 
                 # ------------------------------------------------
-                # STATE → MOVEMENT
+                # STATE â†’ MOVEMENT
                 # ------------------------------------------------
 
                 movement = (
@@ -199,7 +201,7 @@ def main():
                 )
 
                 # ------------------------------------------------
-                # STATE → ZONE
+                # STATE â†’ ZONE
                 # ------------------------------------------------
 
                 transition = zone_engine.update(
@@ -213,7 +215,7 @@ def main():
                 )
 
                 # ------------------------------------------------
-                # STATE + MOVEMENT + ZONE → EVENTS
+                # STATE + MOVEMENT + ZONE â†’ EVENTS
                 # ------------------------------------------------
 
                 events = event_engine.process(
@@ -222,6 +224,7 @@ def main():
                     transition=transition,
                     frame_index=frame_index,
                     timestamp_ms=timestamp_ms,
+                    camera_id=CAMERA_ID,
                 )
 
                 # No event means there is nothing to send
@@ -231,7 +234,7 @@ def main():
                     continue
 
                 # ------------------------------------------------
-                # EVENT → CANONICAL OUTPUT
+                # EVENT â†’ CANONICAL OUTPUT
                 # ------------------------------------------------
 
                 for event in events:
@@ -240,6 +243,7 @@ def main():
                         event_output.build_event(
                             event=event,
                             camera_id=CAMERA_ID,
+                            epoch_ms=int(time.time() * 1000),
                         )
                     )
 

@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Any
 
-from tracker import Track
+from tracking.tracker import Track
 
 
 @dataclass
@@ -138,14 +138,8 @@ class TrackStateManager:
     """
     Maintains persistent state for currently tracked objects.
 
-    For the current system there is one camera, so track_id is
-    sufficient as the dictionary key.
-
-    If multi-camera support is added later, this should become:
-
-        (camera_id, track_id)
-
-    rather than simply track_id.
+    All state is keyed by (camera_id, track_id) to prevent
+    cross-camera identity leakage.
     """
 
     def __init__(
@@ -166,12 +160,15 @@ class TrackStateManager:
         self.max_history = max_history
         self.max_missing_frames = max_missing_frames
 
-        self.states: dict[int, TrackState] = {}
+        self.states: dict[
+            tuple[str | None, int], TrackState
+        ] = {}
 
     def update(
         self,
         tracks: list[Track],
         frame_index: int,
+        camera_id: str | None = None,
     ) -> list[TrackState]:
         """
         Update persistent state from the current frame.
@@ -184,7 +181,9 @@ class TrackStateManager:
                 "frame_index cannot be negative"
             )
 
-        active_ids: set[int] = set()
+        active_keys: set[
+            tuple[str | None, int]
+        ] = set()
 
         for track in tracks:
 
@@ -194,13 +193,14 @@ class TrackStateManager:
             if track_id < 0:
                 continue
 
-            active_ids.add(track_id)
+            key = (camera_id, track_id)
+            active_keys.add(key)
 
             # ---------------------------------------------
             # New track
             # ---------------------------------------------
 
-            if track_id not in self.states:
+            if key not in self.states:
 
                 state = TrackState(
                     track_id=track_id,
@@ -218,7 +218,7 @@ class TrackStateManager:
                     foot_history=[track.foot_point],
                 )
 
-                self.states[track_id] = state
+                self.states[key] = state
 
             # ---------------------------------------------
             # Existing track
@@ -226,7 +226,7 @@ class TrackStateManager:
 
             else:
 
-                self.states[track_id].update(
+                self.states[key].update(
                     track=track,
                     frame_index=frame_index,
                     max_history=self.max_history,
@@ -236,11 +236,13 @@ class TrackStateManager:
         # Remove tracks missing for too long
         # ---------------------------------------------
 
-        expired_ids: list[int] = []
+        expired_keys: list[
+            tuple[str | None, int]
+        ] = []
 
-        for track_id, state in self.states.items():
+        for key, state in self.states.items():
 
-            if track_id in active_ids:
+            if key in active_keys:
                 continue
 
             missing_frames = (
@@ -249,41 +251,45 @@ class TrackStateManager:
             )
 
             if missing_frames > self.max_missing_frames:
-                expired_ids.append(track_id)
+                expired_keys.append(key)
 
-        for track_id in expired_ids:
-            del self.states[track_id]
+        for key in expired_keys:
+            del self.states[key]
 
         # ---------------------------------------------
         # Return states observed in this frame.
         # ---------------------------------------------
 
         return [
-            self.states[track_id]
-            for track_id in active_ids
-            if track_id in self.states
+            self.states[key]
+            for key in active_keys
+            if key in self.states
         ]
 
     def get(
         self,
         track_id: int,
+        camera_id: str | None = None,
     ) -> TrackState | None:
         """
         Retrieve one tracked object's state.
         """
 
-        return self.states.get(track_id)
+        return self.states.get(
+            (camera_id, track_id)
+        )
 
     def remove(
         self,
         track_id: int,
+        camera_id: str | None = None,
     ) -> None:
         """
         Explicitly remove a track state.
         """
 
         self.states.pop(
-            track_id,
+            (camera_id, track_id),
             None,
         )
 
@@ -300,6 +306,7 @@ class TrackStateManager:
         """
 
         return {
-            str(track_id): state.to_dict()
-            for track_id, state in self.states.items()
+            f"{cam}:{track_id}": state.to_dict()
+            for (cam, track_id), state
+            in self.states.items()
         }
