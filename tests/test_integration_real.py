@@ -113,8 +113,8 @@ def test_real_model_integration():
     assert isinstance(result["inference_ms"], float), "inference_ms should be a float"
 
     # verify model info
-    assert result["model"]["name"] == "RT-DETRv2-S", "model name should be RT-DETRv2-S"
-    assert result["model"]["version"] == "baseline-v1", "model version should be baseline-v1"
+    assert result["model"]["name"] == "RF-DETR-Medium", "model name should be RF-DETR-Medium"
+    assert result["model"]["version"] == "rf-detr-medium-v1", "model version should be rf-detr-medium-v1"
 
     # verify each detection has required fields and valid values
     for detection in result["detections"]:

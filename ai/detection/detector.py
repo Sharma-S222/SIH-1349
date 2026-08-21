@@ -42,25 +42,25 @@ class PersonObjectDetector:
 
     def _validate_paths(self) -> None:
         for path, description in (
-            (self.config.model_root, "RT-DETR source directory"),
+            (self.config.rtdetr_model_root, "RT-DETR source directory"),
             (self.config.model_config_path, "RT-DETR model configuration"),
-            (self.config.weights_path, "RT-DETRv2-S weights"),
+            (self.config.rtdetr_weights_path, "RT-DETRv2-S weights"),
         ):
             if not path.exists():
                 raise FileNotFoundError(f"{description} was not found: {path}")
 
     def _load_model(self) -> None:
-        model_root = str(self.config.model_root)
+        model_root = str(self.config.rtdetr_model_root)
         if model_root not in sys.path:
             sys.path.insert(0, model_root)
         # RT-DETR repo has a nested rtdetrv2_pytorch/ subdirectory
-        nested = self.config.model_root / "rtdetrv2_pytorch"
+        nested = self.config.rtdetr_model_root / "rtdetrv2_pytorch"
         if nested.is_dir() and str(nested) not in sys.path:
             sys.path.insert(0, str(nested))
         from src.core import YAMLConfig  # Imported only after the vendor source is available.
 
-        cfg = YAMLConfig(str(self.config.model_config_path), resume=str(self.config.weights_path))
-        checkpoint = torch.load(self.config.weights_path, map_location=self.device)
+        cfg = YAMLConfig(str(self.config.model_config_path), resume=str(self.config.rtdetr_weights_path))
+        checkpoint = torch.load(self.config.rtdetr_weights_path, map_location=self.device)
         state = checkpoint["ema"]["module"] if "ema" in checkpoint else checkpoint["model"]
         cfg.model.load_state_dict(state)
 

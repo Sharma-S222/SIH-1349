@@ -94,8 +94,8 @@ def test_mocked_output_assembly_path():
     assert result["inference_ms"] >= 0, "inference_ms should be non-negative"
 
     # verify model info
-    assert result["model"]["name"] == "RT-DETRv2-S", "model name should be RT-DETRv2-S"
-    assert result["model"]["version"] == "baseline-v1", "model version should be baseline-v1"
+    assert result["model"]["name"] == "RF-DETR-Medium", "model name should be RF-DETR-Medium"
+    assert result["model"]["version"] == "rf-detr-medium-v1", "model version should be rf-detr-medium-v1"
 
     # verify each detection has required fields
     for detection in result["detections"]:
@@ -241,7 +241,7 @@ def test_detection_result_v1_schema_strictness():
         "people_count": 0,
         "detections": [],
         "inference_ms": 0.0,
-        "model": {"name": "RT-DETRv2-S", "version": "baseline-v1"},
+        "model": {"name": "RF-DETR-Medium", "version": "rf-detr-medium-v1"},
     }
     _validate_schema(valid_minimal)
 
@@ -271,7 +271,7 @@ def test_detection_result_v1_schema_strictness():
             },
         ],
         "inference_ms": 200.5,
-        "model": {"name": "RT-DETRv2-S", "version": "baseline-v1"},
+        "model": {"name": "RF-DETR-Medium", "version": "rf-detr-medium-v1"},
     }
     _validate_schema(valid_with_detections)
 
@@ -286,7 +286,7 @@ def test_detection_result_v1_schema_strictness():
         "people_count": 0,
         "detections": [],
         "inference_ms": 0.0,
-        "model": {"name": "RT-DETRv2-S", "version": "baseline-v1"},
+        "model": {"name": "RF-DETR-Medium", "version": "rf-detr-medium-v1"},
     }
     try:
         _validate_schema(invalid_version)
@@ -305,7 +305,7 @@ def test_detection_result_v1_schema_strictness():
         "people_count": -1,
         "detections": [],
         "inference_ms": 0.0,
-        "model": {"name": "RT-DETRv2-S", "version": "baseline-v1"},
+        "model": {"name": "RF-DETR-Medium", "version": "rf-detr-medium-v1"},
     }
     try:
         _validate_schema(invalid_people)
@@ -324,7 +324,7 @@ def test_detection_result_v1_schema_strictness():
         "people_count": 0,
         "detections": [],
         "inference_ms": -5.0,
-        "model": {"name": "RT-DETRv2-S", "version": "baseline-v1"},
+        "model": {"name": "RF-DETR-Medium", "version": "rf-detr-medium-v1"},
     }
     try:
         _validate_schema(invalid_inference)
@@ -349,7 +349,7 @@ def test_detection_result_v1_schema_strictness():
             }
         ],
         "inference_ms": 0.0,
-        "model": {"name": "RT-DETRv2-S", "version": "baseline-v1"},
+        "model": {"name": "RF-DETR-Medium", "version": "rf-detr-medium-v1"},
     }
     try:
         _validate_schema(invalid_detection)
@@ -376,7 +376,7 @@ def test_detection_result_v1_schema_strictness():
             }
         ],
         "inference_ms": 0.0,
-        "model": {"name": "RT-DETRv2-S", "version": "baseline-v1"},
+        "model": {"name": "RF-DETR-Medium", "version": "rf-detr-medium-v1"},
     }
     try:
         _validate_schema(invalid_confidence)

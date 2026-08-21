@@ -33,7 +33,7 @@ def empty_detections_result() -> dict[str, Any]:
         "people_count": 0,
         "detections": [],
         "inference_ms": 0.0,
-        "model": {"name": "RT-DETRv2-S", "version": "baseline-v1"},
+        "model": {"name": "RF-DETR-Medium", "version": "rf-detr-medium-v1"},
     }
 
 
@@ -58,7 +58,7 @@ def single_person_result() -> dict[str, Any]:
             }
         ],
         "inference_ms": 150.0,
-        "model": {"name": "RT-DETRv2-S", "version": "baseline-v1"},
+        "model": {"name": "RF-DETR-Medium", "version": "rf-detr-medium-v1"},
     }
 
 
@@ -97,7 +97,7 @@ def multi_detection_result() -> dict[str, Any]:
             },
         ],
         "inference_ms": 200.5,
-        "model": {"name": "RT-DETRv2-S", "version": "baseline-v1"},
+        "model": {"name": "RF-DETR-Medium", "version": "rf-detr-medium-v1"},
     }
 
 

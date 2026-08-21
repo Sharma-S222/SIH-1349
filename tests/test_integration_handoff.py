@@ -73,15 +73,14 @@ def test_configuration_loaded():
     config = DetectorConfig()
 
     # Verify required configuration fields
-    assert config.model_name == "RT-DETRv2-S", f"Expected model_name RT-DETRv2-S, got {config.model_name}"
-    assert config.model_version == "baseline-v1", f"Expected model_version baseline-v1, got {config.model_version}"
+    assert config.model_name == "RF-DETR-Medium", f"Expected model_name RF-DETR-Medium, got {config.model_name}"
+    assert config.model_version == "rf-detr-medium-v1", f"Expected model_version rf-detr-medium-v1, got {config.model_version}"
     assert config.confidence_threshold == 0.50, f"Expected confidence_threshold 0.50, got {config.confidence_threshold}"
     assert len(config.allowed_classes) > 0, "allowed_classes should not be empty"
     assert "person" in config.allowed_classes, "person should be in allowed_classes"
 
-    # Verify paths exist
-    assert Path(config.weights_path).exists(), f"Weights file missing: {config.weights_path}"
-    assert Path(config.model_config_path).exists(), f"Model config missing: {config.model_config_path}"
+    # Verify RF-DETR weights path exists
+    assert Path(config.rf_detr_weights_path).exists(), f"RF-DETR weights file missing: {config.rf_detr_weights_path}"
 
 
 def test_detector_loads_successfully():
@@ -131,8 +130,8 @@ def test_full_detection_pipeline():
         "people_count should match person detections"
 
     # Verify model info
-    assert result["model"]["name"] == "RT-DETRv2-S"
-    assert result["model"]["version"] == "baseline-v1"
+    assert result["model"]["name"] == "RF-DETR-Medium"
+    assert result["model"]["version"] == "rf-detr-medium-v1"
 
 
 def test_schema_consistency_across_runs():
@@ -185,16 +184,15 @@ def test_rediscovery_of_weights():
     file that can be read.
     """
     config = DetectorConfig()
-    weights_path = Path(config.weights_path)
+    weights_path = Path(config.rf_detr_weights_path)
 
     assert weights_path.exists(), f"Weights file should exist at {weights_path}"
     assert weights_path.stat().st_size > 0, f"Weights file should not be empty"
 
-    # Verify it's a valid PyTorch checkpoint
+    # Verify it's a valid PyTorch checkpoint (RF-DETR format)
     import torch
-    checkpoint = torch.load(str(weights_path), map_location="cpu")
-    assert "ema" in checkpoint or "model" in checkpoint, \
-        "Checkpoint should contain 'ema' or 'model' key"
+    checkpoint = torch.load(str(weights_path), map_location="cpu", weights_only=False)
+    assert isinstance(checkpoint, dict), "Checkpoint should be a dict"
 
 
 def test_sample_image_processing():

@@ -41,5 +41,5 @@ class TestEmptyDetections:
 
     def test_empty_model_info(self, empty_detections_result: dict[str, Any]) -> None:
         model = empty_detections_result["model"]
-        assert model["name"] == "RT-DETRv2-S"
-        assert model["version"] == "baseline-v1"
+        assert model["name"] == "RF-DETR-Medium"
+        assert model["version"] == "rf-detr-medium-v1"

@@ -54,7 +54,7 @@ class TestPeopleCounting:
             "people_count": 0,
             "detections": [],
             "inference_ms": 0.0,
-            "model": {"name": "RT-DETRv2-S", "version": "baseline-v1"},
+            "model": {"name": "RF-DETR-Medium", "version": "rf-detr-medium-v1"},
         }
         assert isinstance(result["people_count"], int)
         assert result["people_count"] >= 0

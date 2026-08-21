@@ -32,8 +32,8 @@ def detector():
             "confidence_threshold": 0.5,
             "allowed_classes": frozenset({"person"}),
             "device": None,
-            "model_name": "RT-DETRv2-S",
-            "model_version": "baseline-v1",
+            "model_name": "RF-DETR-Medium",
+            "model_version": "rf-detr-medium-v1",
         })()
         det.device = type("D", (), {"type": "cpu"})()
         det._transform = None

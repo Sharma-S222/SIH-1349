@@ -48,7 +48,7 @@ class TestDetectionResultSchema:
             "people_count": 0,
             "detections": [],
             "inference_ms": 0.0,
-            "model": {"name": "RT-DETRv2-S", "version": "baseline-v1"},
+            "model": {"name": "RF-DETR-Medium", "version": "rf-detr-medium-v1"},
         }
         with pytest.raises(Exception):
             validate(instance=bad, schema=detection_result_v1_schema)
@@ -64,7 +64,7 @@ class TestDetectionResultSchema:
             "people_count": -1,
             "detections": [],
             "inference_ms": 0.0,
-            "model": {"name": "RT-DETRv2-S", "version": "baseline-v1"},
+            "model": {"name": "RF-DETR-Medium", "version": "rf-detr-medium-v1"},
         }
         with pytest.raises(Exception):
             validate(instance=bad, schema=detection_result_v1_schema)
@@ -80,7 +80,7 @@ class TestDetectionResultSchema:
             "people_count": 0,
             "detections": [],
             "inference_ms": -5.0,
-            "model": {"name": "RT-DETRv2-S", "version": "baseline-v1"},
+            "model": {"name": "RF-DETR-Medium", "version": "rf-detr-medium-v1"},
         }
         with pytest.raises(Exception):
             validate(instance=bad, schema=detection_result_v1_schema)

@@ -1,4 +1,4 @@
-"""Configuration for RT-DETRv2-S frame inference."""
+"""Configuration for detector backends (RF-DETR Medium / RT-DETRv2-S fallback)."""
 
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -6,6 +6,8 @@ from typing import FrozenSet, Optional
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+_DEFAULT_RFDETR_WEIGHTS = Path.home() / ".roboflow" / "models" / "rf-detr-medium.pth"
 
 
 @dataclass(frozen=True)
@@ -17,16 +19,19 @@ class DetectorConfig:
         default_factory=lambda: frozenset({"person", "backpack", "handbag", "suitcase"})
     )
     device: Optional[str] = None
-    model_name: str = "RT-DETRv2-S"
-    model_version: str = "baseline-v1"
-    weights_path: Path = PROJECT_ROOT / "weights" / "rtdetrv2_s.pth"
-    model_root: Path = PROJECT_ROOT / "third_party" / "RT-DETR" / "rtdetrv2_pytorch"
+
+    # RF-DETR Medium (primary detector)
+    model_name: str = "RF-DETR-Medium"
+    model_version: str = "rf-detr-medium-v1"
+    rf_detr_weights_path: Path = _DEFAULT_RFDETR_WEIGHTS
+
+    # RT-DETRv2-S (rollback fallback — kept for quick revert)
+    rtdetr_weights_path: Path = PROJECT_ROOT / "weights" / "rtdetrv2_s.pth"
+    rtdetr_model_root: Path = PROJECT_ROOT / "third_party" / "RT-DETR" / "rtdetrv2_pytorch"
 
     @property
     def model_config_path(self) -> Path:
-        # RT-DETR repo contains a nested rtdetrv2_pytorch/ subdirectory
-        # with the actual PyTorch source and configs.
-        nested = self.model_root / "rtdetrv2_pytorch"
+        nested = self.rtdetr_model_root / "rtdetrv2_pytorch"
         if nested.is_dir():
             return nested / "configs" / "rtdetrv2" / "rtdetrv2_r18vd_120e_coco.yml"
-        return self.model_root / "configs" / "rtdetrv2" / "rtdetrv2_r18vd_120e_coco.yml"
+        return self.rtdetr_model_root / "configs" / "rtdetrv2" / "rtdetrv2_r18vd_120e_coco.yml"
