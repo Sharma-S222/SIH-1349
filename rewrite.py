@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { VideoOff, AlertTriangle, Loader2 } from 'lucide-react';
+import os
+content = '''import { useState, useEffect } from 'react';
+import { Video, VideoOff, AlertTriangle, Loader2 } from 'lucide-react';
 import type { CameraStatus, RiskLevel } from '../../types/ui';
 
 interface CCTVPlaceholderProps {
@@ -32,7 +33,7 @@ export function CCTVPlaceholder({ cameraId, status, sourceType = 'VIDEO', people
   }
 
   return (
-    <div className={`relative bg-[#060a10] overflow-hidden ${className}`}>
+    <div className={elative bg-[#060a10] overflow-hidden }>
       <div
         className="absolute inset-0 opacity-[0.025]"
         style={{
@@ -68,9 +69,9 @@ export function CCTVPlaceholder({ cameraId, status, sourceType = 'VIDEO', people
 
       {isOnline && (
         <img 
-          src={`${API_BASE_URL}/api/cameras/${cameraId}/stream`} 
-          className={`w-full h-full object-cover relative z-0 transition-opacity duration-300 ${imgStatus === 'loaded' ? 'opacity-100' : 'opacity-0'}`} 
-          alt={`Camera ${cameraId} stream`} 
+          src={${API_BASE_URL}/api/cameras//stream} 
+          className={w-full h-full object-cover relative z-0 transition-opacity duration-300 } 
+          alt={Camera  stream} 
           onLoad={() => setImgStatus('loaded')}
           onError={() => setImgStatus('error')}
         />
@@ -88,12 +89,6 @@ export function CCTVPlaceholder({ cameraId, status, sourceType = 'VIDEO', people
           DEGRADED
         </div>
       )}
-      {status === 'STALE' && (
-        <div className="absolute top-2 left-2 flex items-center gap-1 bg-slate-600/80 px-1.5 py-0.5 rounded text-slate-100 text-[10px] font-mono tracking-wide z-20">
-          <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
-          STALE
-        </div>
-      )}
 
       <div className="absolute top-2 right-2 text-[9px] font-mono text-slate-600/70 bg-black/50 px-1.5 py-0.5 rounded z-20">
         {cameraId}
@@ -104,11 +99,7 @@ export function CCTVPlaceholder({ cameraId, status, sourceType = 'VIDEO', people
           <div className="flex items-center justify-between">
             <span className="text-white/90 text-[11px] font-mono">{peopleCount} PEOPLE</span>
             {risk && risk !== 'LOW' && (
-              <span className={`text-[9px] font-mono font-medium px-1.5 py-0.5 rounded ${
-                risk === 'CRITICAL' ? 'bg-red-700/80 text-red-100' :
-                risk === 'HIGH' ? 'bg-orange-700/80 text-orange-100' :
-                'bg-amber-700/80 text-amber-100'
-              }`}>{risk}</span>
+              <span className={	ext-[9px] font-mono font-medium px-1.5 py-0.5 rounded }>{risk}</span>
             )}
           </div>
         </div>
@@ -116,3 +107,6 @@ export function CCTVPlaceholder({ cameraId, status, sourceType = 'VIDEO', people
     </div>
   );
 }
+'''
+with open('frontend/src/components/shared/CCTVPlaceholder.tsx', 'w', encoding='utf-8') as f:
+    f.write(content)

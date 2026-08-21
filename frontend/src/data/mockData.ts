@@ -10,22 +10,10 @@ export const ZONES: Zone[] = [
 ];
 
 export const CAMERAS: Camera[] = [
-  { camera_id: 'CAM_01', name: 'Platform 1 West', zone_id: 'PLT1', zone_name: 'Platform 1', status: 'ONLINE', people_count: 42, risk: 'LOW', last_update: '21:25:10', latest_event: 'Normal activity' },
-  { camera_id: 'CAM_02', name: 'Platform 1 East', zone_id: 'PLT1', zone_name: 'Platform 1', status: 'ONLINE', people_count: 38, risk: 'LOW', last_update: '21:25:08', latest_event: 'Normal activity' },
-  { camera_id: 'CAM_03', name: 'Platform 2 West', zone_id: 'PLT2', zone_name: 'Platform 2', status: 'ONLINE', people_count: 61, risk: 'MEDIUM', last_update: '21:24:55', latest_event: 'Elevated crowd density' },
-  { camera_id: 'CAM_04', name: 'Track / Restricted Zone', zone_id: 'TRKZ', zone_name: 'Track Zone', status: 'ONLINE', people_count: 12, risk: 'HIGH', last_update: '21:25:22', latest_event: 'Potential Restricted Zone Intrusion' },
-  { camera_id: 'CAM_05', name: 'Platform 3 North', zone_id: 'PLT3', zone_name: 'Platform 3', status: 'ONLINE', people_count: 87, risk: 'HIGH', last_update: '21:25:00', latest_event: 'Crowd density approaching threshold' },
-  { camera_id: 'CAM_06', name: 'Platform 3 South', zone_id: 'PLT3', zone_name: 'Platform 3', status: 'ONLINE', people_count: 94, risk: 'HIGH', last_update: '21:24:44', latest_event: 'Potential Crowd Overload — Verified' },
-  { camera_id: 'CAM_07', name: 'Main Concourse', zone_id: 'CONC', zone_name: 'Main Concourse', status: 'ONLINE', people_count: 91, risk: 'MEDIUM', last_update: '21:25:01', latest_event: 'Normal activity' },
-  { camera_id: 'CAM_08', name: 'Main Entrance North', zone_id: 'ENTR', zone_name: 'Main Entrance', status: 'ONLINE', people_count: 45, risk: 'LOW', last_update: '21:25:05', latest_event: 'Normal activity' },
-  { camera_id: 'CAM_09', name: 'Main Entrance South', zone_id: 'ENTR', zone_name: 'Main Entrance', status: 'ONLINE', people_count: 52, risk: 'LOW', last_update: '21:24:58', latest_event: 'Normal activity' },
-  { camera_id: 'CAM_10', name: 'Staircase A Upper', zone_id: 'STCA', zone_name: 'Staircase A', status: 'ONLINE', people_count: 28, risk: 'CRITICAL', last_update: '21:25:22', latest_event: 'Possible Person Down — CRITICAL' },
-  { camera_id: 'CAM_11', name: 'Staircase A Lower', zone_id: 'STCA', zone_name: 'Staircase A', status: 'ONLINE', people_count: 31, risk: 'HIGH', last_update: '21:20:15', latest_event: 'Possible Fall Detected' },
-  { camera_id: 'CAM_12', name: 'Staircase B', zone_id: 'STCB', zone_name: 'Staircase B', status: 'ONLINE', people_count: 19, risk: 'LOW', last_update: '21:25:03', latest_event: 'Normal activity' },
-  { camera_id: 'CAM_13', name: 'Ticket Counter', zone_id: 'CONC', zone_name: 'Main Concourse', status: 'ONLINE', people_count: 67, risk: 'MEDIUM', last_update: '21:22:11', latest_event: 'Suspected Abandoned Object' },
-  { camera_id: 'CAM_14', name: 'Luggage Area', zone_id: 'CONC', zone_name: 'Main Concourse', status: 'ONLINE', people_count: 22, risk: 'LOW', last_update: '21:25:04', latest_event: 'Normal activity' },
-  { camera_id: 'CAM_15', name: 'Exit Gate 1', zone_id: 'EXIT', zone_name: 'Exit Gates', status: 'DEGRADED', people_count: 55, risk: 'MEDIUM', last_update: '21:20:44', latest_event: 'Signal degraded' },
-  { camera_id: 'CAM_16', name: 'Exit Gate 2', zone_id: 'EXIT', zone_name: 'Exit Gates', status: 'OFFLINE', people_count: 0, risk: 'LOW', last_update: '21:09:32', latest_event: 'Camera offline' },
+  { camera_id: 'CAM_PLATFORM_01', name: 'Platform 1', zone_id: 'PLT1', zone_name: 'Platform 1', status: 'OFFLINE', people_count: 0, risk: 'LOW', last_update: '-', latest_event: 'AWAITING VIDEO', source_type: 'VIDEO' },
+  { camera_id: 'CAM_PLATFORM_02', name: 'Platform 2', zone_id: 'PLT2', zone_name: 'Platform 2', status: 'OFFLINE', people_count: 0, risk: 'LOW', last_update: '-', latest_event: 'AWAITING VIDEO', source_type: 'VIDEO' },
+  { camera_id: 'CAM_PLATFORM_03', name: 'Platform 3 (Live)', zone_id: 'PLT3', zone_name: 'Platform 3', status: 'OFFLINE', people_count: 0, risk: 'LOW', last_update: '-', latest_event: 'NOT CONNECTED', source_type: 'LIVE_CAMERA' },
+  { camera_id: 'CAM_PLATFORM_04', name: 'Platform 4', zone_id: 'PLT4', zone_name: 'Platform 4', status: 'OFFLINE', people_count: 0, risk: 'LOW', last_update: '-', latest_event: 'NOT CONNECTED', source_type: 'DISCONNECTED' },
 ];
 
 export const INITIAL_EVENTS: RailwayEvent[] = [
@@ -201,3 +189,4 @@ export const RESPONSE_STATS = {
   totalToday: 99,
   resolvedToday: 88,
 };
+

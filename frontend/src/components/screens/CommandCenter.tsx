@@ -52,7 +52,7 @@ export function CommandCenter({ events, onViewIncident, onNavigate }: CommandCen
     })
     .slice(0, 4);
 
-  const previewCameras = CAMERAS.filter(c => c.risk !== 'LOW').slice(0, 4);
+  const previewCameras = CAMERAS.slice(0, 4);
 
   function formatTime(isoStr: string) {
     return new Date(isoStr).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
@@ -262,6 +262,7 @@ export function CommandCenter({ events, onViewIncident, onNavigate }: CommandCen
               <CCTVPlaceholder
                 cameraId={cam.camera_id}
                 status={cam.status}
+                sourceType={cam.source_type}
                 peopleCount={cam.people_count}
                 risk={cam.risk}
                 className="h-28"

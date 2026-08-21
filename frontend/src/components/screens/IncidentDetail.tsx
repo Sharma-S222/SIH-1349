@@ -138,6 +138,7 @@ export function IncidentDetail({ events, selectedId, onSelect, onVerify, onDismi
                 <CCTVPlaceholder
                   cameraId={incident.camera_id}
                   status={camera?.status ?? 'ONLINE'}
+                  sourceType={camera?.source_type}
                   peopleCount={incident.people_count}
                   risk={incident.severity}
                   className="h-44"

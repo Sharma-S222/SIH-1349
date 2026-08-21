@@ -37,6 +37,8 @@ export interface Camera {
   status: CameraStatus;
   people_count: number;
   risk: RiskLevel;
+  source_type?: string;
+  telemetry?: any;
   latest_event?: string;
   last_update: string;
 }
@@ -45,6 +47,8 @@ export interface Zone {
   zone_id: string;
   name: string;
   risk: RiskLevel;
+  source_type?: string;
+  telemetry?: any;
   people_count: number;
   trend: 'up' | 'down' | 'stable';
   capacity: number;
@@ -66,3 +70,5 @@ export interface TimelineEntry {
   label: string;
   actor?: string;
 }
+
+
